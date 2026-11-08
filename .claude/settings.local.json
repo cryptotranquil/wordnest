@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "Bash(flutter clean *)",
+      "Bash(flutter pub *)",
+      "Bash(flutter test *)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\Melo\\\\Downloads\\\\wordnest_audio_pack\" -ErrorAction SilentlyContinue)",
+      "Bash(dart analyze *)",
+      "Bash(cd /c:/Users/Melo/projects/wordnest && flutter analyze lib/src/widgets/fx/)",
+      "Read(//c:/Users/Melo/projects/**)",
+      "Bash(pkill -f flutter analyze)",
+      "Bash(timeout 120 flutter test test/fx_widgets_test.dart)",
+      "Bash(timeout 90 flutter test)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

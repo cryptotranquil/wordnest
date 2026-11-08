@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&amp;family=Quicksand:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-background": "#d3e6eb", "error": "#ffb4ab", "surface-container-lowest": "#011014", "surface": "#05161a", "secondary-container": "#bd8700", "inverse-primary": "#006a63", "surface-container": "#112226", "inverse-on-surface": "#223337", "on-primary-fixed": "#00201d", "surface-container-high": "#1c2c31", "tertiary-fixed-dim": "#ccc6b6", "surface-variant": "#27373c", "on-secondary": "#422d00", "surface-container-low": "#0d1e22", "on-primary": "#003733", "surface-dim": "#05161a", "on-error-container": "#ffdad6", "surface-bright": "#2b3c40", "on-surface-variant": "#bdc9c6", "tertiary": "#ccc6b6", "error-container": "#93000a", "primary": "#80d5cb", "primary-container": "#0f766e", "on-tertiary-container": "#f0e9d9", "surface-tint": "#80d5cb", "on-secondary-fixed-variant": "#5e4200", "on-error": "#690005", "background": "#05161a", "on-secondary-fixed": "#271900", "secondary-fixed-dim": "#fabc41", "on-primary-container": "#a3faef", "primary-fixed": "#9cf2e8", "tertiary-fixed": "#e9e2d2", "outline-variant": "#3e4947", "outline": "#889391", "on-tertiary-fixed": "#1e1c12", "tertiary-container": "#6d695c", "surface-container-highest": "#27373c", "on-surface": "#d3e6eb", "on-secondary-container": "#392600", "on-tertiary": "#333025", "primary-fixed-dim": "#80d5cb", "secondary-fixed": "#ffdea8", "on-tertiary-fixed-variant": "#4a473b", "inverse-surface": "#d3e6eb", "secondary": "#fabc41", "on-primary-fixed-variant": "#00504a" }, "borderRadius": { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, "spacing": { "margin": "1rem", "space-xs": "0.25rem", "space-xl": "1.5rem", "gutter": "0.75rem", "space-lg": "1rem", "space-md": "0.75rem", "space-sm": "0.5rem" }, "fontFamily": { "display-lg": ["Quicksand"], "headline-tile": ["Quicksand"], "label-md": ["Plus Jakarta Sans"], "headline-md": ["Quicksand"], "body-md": ["Quicksand"], "label-sm": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-sm": ["Quicksand"], "body-lg": ["Quicksand"], "display-lg-mobile": ["Quicksand"] }, "fontSize": { "display-lg": ["36px", { "lineHeight": "44px", "fontWeight": "700" }], "headline-tile": ["26px", { "lineHeight": "28px", "fontWeight": "700" }], "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "600" }], "headline-md": ["22px", { "lineHeight": "28px", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }], "label-sm": ["10px", { "lineHeight": "14px", "fontWeight": "700" }], "label-lg": ["14px", { "lineHeight": "18px", "fontWeight": "700" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "body-lg": ["16px", { "lineHeight": "22px", "fontWeight": "600" }], "display-lg-mobile": ["30px", { "lineHeight": "38px", "fontWeight": "700" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface-container-low/85 backdrop-blur-xl shadow-[0_4px_24px_rgba(0,0,0,0.4)] pt-safe"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><button class="w-11 h-11 rounded-full flex items-center justify-center bg-surface-variant/40 text-on-surface hover:bg-surface-variant transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[22px]">close</span></button><h1 class="font-headline-sm text-headline-sm text-on-surface">Tutorial Dialog</h1></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="flex flex-col relative w-full pt-16 pb-safe bg-surface min-h-screen"><div class="flex flex-col w-full text-on-surface select-none pb-8">
+<!-- Atmospheric Scenery Background Card simulating the in-game tutorial dialog -->
+<div class="relative w-full overflow-hidden rounded-lg bg-surface-container-low shadow-2xl p-space-md flex flex-col gap-space-lg">
+<!-- Ambient Fog / Glow Orbs -->
+<div class="absolute -top-16 -left-16 w-56 h-56 rounded-full bg-primary-container/20 blur-3xl pointer-events-none"></div>
+<div class="absolute top-1/2 -right-20 w-64 h-64 rounded-full bg-secondary-container/15 blur-3xl pointer-events-none"></div>
+<!-- 1. Modal Sub-Header Bar (Framed as Zen Dialog Card) -->
+<div class="flex items-center justify-between w-full z-10">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">spa</span>
+</div>
+<div>
+<span class="font-headline-sm text-headline-sm text-on-surface">How to Play</span>
+<p class="font-label-sm text-label-sm text-primary">WORD SANCTUARY</p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs bg-surface-container px-3 py-1 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-secondary text-[14px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-label-md text-label-md text-secondary">Step 1 of 3</span>
+</div>
+</div>
+<!-- Scenic Immersion Preview Banner -->
+<div class="relative w-full h-24 rounded-DEFAULT overflow-hidden shadow-md">
+<div class="w-full h-full bg-cover bg-center" data-alt="A tranquil twilight Japanese zen garden pond surrounded by misty emerald pine trees, glowing warm amber lantern reflections on still rippling water, mystical teal fog, and gentle ethereal atmosphere." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDDAD-k2wrjZIOaMmc4A96TAEJEz_I7PZfYk9kBTzGnRqZbWyQggnfSV-WEBQCptNe8LlcDetBlQ-j1iqc2iCayzLHCbFQqYnSibkHjDnF8FWeeIPS9289bzCMbpZx-BveuNezA1BJhM2xkHqc9FSyqlaW9r0Xt_VXNK5edZW3lxEyCFXZq132pbTD0qaVuBwy_yFTXOlbEDWTLyXgY1BZ6T0QeMR9t4j_xk56JMvdO')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-surface-container-low/40 to-transparent flex items-end p-space-sm">
+<div class="flex items-center gap-space-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-primary">nature</span>
+<span class="font-label-md text-label-md">Sanctuary Chapter 1: Whispering Grove</span>
+</div>
+</div>
+</div>
+<!-- 2. Interactive Letter Wheel Simulation Section -->
+<div class="relative w-full rounded-DEFAULT bg-surface-container p-space-md flex flex-col items-center gap-space-md shadow-lg overflow-hidden">
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[18px]">gesture</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">1. Swipe to Connect</h2>
+</div>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-primary/20 text-primary">AUTOPLAY DEMO</span>
+</div>
+<!-- Live Streamer Bar previewing word formation -->
+<div class="flex items-center gap-2 h-10 px-4 rounded-full bg-surface-container-highest shadow-inner">
+<span class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center font-headline-sm text-headline-sm text-on-surface-variant transition-all duration-300" id="slot-0">L</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<span class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center font-headline-sm text-headline-sm text-on-surface-variant transition-all duration-300" id="slot-1">E</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<span class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center font-headline-sm text-headline-sm text-on-surface-variant transition-all duration-300" id="slot-2">A</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<span class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center font-headline-sm text-headline-sm text-on-surface-variant transition-all duration-300" id="slot-3">F</span>
+</div>
+<!-- Wheel Visual Container with Tracer Simulation -->
+<div class="relative w-52 h-52 flex items-center justify-center my-1">
+<!-- Circular Wheel Dish Plate -->
+<div class="absolute inset-0 rounded-full bg-surface-container-low shadow-inner flex items-center justify-center">
+<div class="w-44 h-44 rounded-full bg-surface-container/50"></div>
+</div>
+<!-- SVG Path Tracer -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-10" viewbox="0 0 208 208">
+<defs>
+<lineargradient id="tracerGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#80d5cb" stop-opacity="0.9"></stop>
+<stop offset="100%" stop-color="#fabc41" stop-opacity="1"></stop>
+</lineargradient>
+</defs>
+<!-- Dynamic connecting path between nodes -->
+<!-- Coordinates: Top(L): 104, 34 | Right(E): 174, 104 | Bottom(A): 104, 174 | Left(F): 34, 104 -->
+<path class="opacity-40" d="M 104,34 L 174,104 L 104,174 L 34,104" fill="none" id="guidePath" stroke="url(#tracerGradient)" stroke-dasharray="8 6" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"></path>
+<path class="transition-all duration-700" d="M 104,34 L 174,104 L 104,174 L 34,104" fill="none" id="activeBeam" stroke="#fabc41" stroke-dasharray="300" stroke-dashoffset="300" stroke-linecap="round" stroke-linejoin="round" stroke-width="6"></path>
+</svg>
+<!-- Simulated Touch Cursor Point -->
+<div class="absolute z-30 w-7 h-7 rounded-full bg-secondary flex items-center justify-center shadow-lg transition-all duration-500 ease-in-out pointer-events-none" id="touchCursor" style="top: 20px; left: 90px;">
+<span class="w-3 h-3 rounded-full bg-on-secondary"></span>
+</div>
+<!-- Wheel Nodes (Top: L, Right: E, Bottom: A, Left: F) -->
+<!-- Node L -->
+<div class="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-surface-container-highest shadow-md flex items-center justify-center font-headline-tile text-headline-tile text-on-surface z-20 transition-all duration-300" id="node-L">
+          L
+        </div>
+<!-- Node E -->
+<div class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-surface-container-highest shadow-md flex items-center justify-center font-headline-tile text-headline-tile text-on-surface z-20 transition-all duration-300" id="node-E">
+          E
+        </div>
+<!-- Node A -->
+<div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-surface-container-highest shadow-md flex items-center justify-center font-headline-tile text-headline-tile text-on-surface z-20 transition-all duration-300" id="node-A">
+          A
+        </div>
+<!-- Node F -->
+<div class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-surface-container-highest shadow-md flex items-center justify-center font-headline-tile text-headline-tile text-on-surface z-20 transition-all duration-300" id="node-F">
+          F
+        </div>
+<!-- Center Zen Blossom Icon -->
+<div class="w-8 h-8 rounded-full bg-surface-container-lowest flex items-center justify-center text-primary/40 pointer-events-none">
+<span class="material-symbols-outlined text-[16px]">eco</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-center text-on-surface-variant px-space-xs">
+        Drag your finger across letter stones smoothly. Words connect forward, backward, or in diagonal sequences.
+      </p>
+</div>
+<!-- 3. Crossword Board Placement Simulation -->
+<div class="relative w-full rounded-DEFAULT bg-surface-container p-space-md flex flex-col gap-space-sm shadow-lg">
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[18px]">grid_view</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">2. Grid Placement</h3>
+</div>
+<div class="flex items-center gap-1 text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+<span>Auto-fills</span>
+</div>
+</div>
+<!-- Mini 4x4 crossword simulator grid -->
+<div class="flex flex-col items-center justify-center py-2">
+<div class="grid grid-cols-4 gap-2 p-2 rounded-DEFAULT bg-surface-container-low shadow-inner">
+<!-- Row 1 (Word: LEAF) -->
+<div class="w-10 h-10 rounded-md bg-secondary flex items-center justify-center text-on-secondary font-headline-sm text-headline-sm shadow-md transition-all duration-500" id="grid-l">L</div>
+<div class="w-10 h-10 rounded-md bg-secondary flex items-center justify-center text-on-secondary font-headline-sm text-headline-sm shadow-md transition-all duration-500" id="grid-e">E</div>
+<div class="w-10 h-10 rounded-md bg-secondary flex items-center justify-center text-on-secondary font-headline-sm text-headline-sm shadow-md transition-all duration-500" id="grid-a">A</div>
+<div class="w-10 h-10 rounded-md bg-secondary flex items-center justify-center text-on-secondary font-headline-sm text-headline-sm shadow-md transition-all duration-500" id="grid-f">F</div>
+<!-- Row 2 -->
+<div class="w-10 h-10 rounded-md bg-surface-container-lowest opacity-40"></div>
+<div class="w-10 h-10 rounded-md bg-surface-container-highest flex items-center justify-center text-on-surface font-headline-sm text-headline-sm">L</div>
+<div class="w-10 h-10 rounded-md bg-surface-container-lowest opacity-40"></div>
+<div class="w-10 h-10 rounded-md bg-surface-container-highest flex items-center justify-center text-on-surface font-headline-sm text-headline-sm">A</div>
+<!-- Row 3 -->
+<div class="w-10 h-10 rounded-md bg-surface-container-highest flex items-center justify-center text-on-surface font-headline-sm text-headline-sm">C</div>
+<div class="w-10 h-10 rounded-md bg-surface-container-highest flex items-center justify-center text-on-surface font-headline-sm text-headline-sm">M</div>
+<div class="w-10 h-10 rounded-md bg-surface-container-highest flex items-center justify-center text-on-surface font-headline-sm text-headline-sm">A</div>
+<div class="w-10 h-10 rounded-md bg-surface-container-highest flex items-center justify-center text-on-surface font-headline-sm text-headline-sm">L</div>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant text-center">
+        Words automatically populate the crossword grid when discovered. Complete all rows to unlock peaceful sanctuary gardens.
+      </p>
+</div>
+<!-- 4. Three Core Gameplay Rules Carousel / Cards -->
+<div class="flex flex-col gap-space-sm w-full">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">filter_vintage</span>
+        Sanctuary Principles
+      </h3>
+<div class="flex flex-col gap-space-sm w-full">
+<!-- Rule 1 (Active) -->
+<div class="p-space-md rounded-DEFAULT bg-surface-container flex items-start gap-space-md shadow-md">
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm shrink-0">
+            1
+          </div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Unwind &amp; Trace</span>
+<p class="font-body-md text-body-md text-on-surface-variant">There are no timers or rush penalties. Glide your fingers freely across the wheel in any sequence.</p>
+</div>
+</div>
+<!-- Rule 2 -->
+<div class="p-space-md rounded-DEFAULT bg-surface-container flex items-start gap-space-md shadow-md">
+<div class="w-9 h-9 rounded-full bg-surface-container-high text-primary flex items-center justify-center font-headline-sm text-headline-sm shrink-0">
+            2
+          </div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Restore Sanctuary Gardens</span>
+<p class="font-body-md text-body-md text-on-surface-variant">Clearing puzzles nourishes bonsai trees, koi ponds, and mist gardens across your tranquil landscape.</p>
+</div>
+</div>
+<!-- Rule 3 -->
+<div class="p-space-md rounded-DEFAULT bg-surface-container flex items-start gap-space-md shadow-md">
+<div class="w-9 h-9 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center font-headline-sm text-headline-sm shrink-0">
+<span class="material-symbols-outlined text-[20px]">monetization_on</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface">Hidden Bonus Words</span>
+<span class="font-label-sm text-label-sm px-2 py-0.5 rounded-full bg-secondary/20 text-secondary">+50 Coins</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Find legitimate words omitted from the puzzle grid to fill the golden butterfly jar for coin rewards.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- 5. Zen Practice Sandbox / Mini Interactive Playground -->
+<div class="relative w-full rounded-DEFAULT bg-surface-container p-space-md flex flex-col gap-space-md shadow-lg overflow-hidden">
+<!-- Glow ambient backdrop -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">touch_app</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Try it yourself!</h3>
+</div>
+<button class="font-label-sm text-label-sm px-2 py-1 rounded-full bg-surface-container-high text-on-surface-variant hover:text-on-surface flex items-center gap-1 transition-colors" id="resetSandboxBtn">
+<span class="material-symbols-outlined text-[14px]">refresh</span>
+          Reset
+        </button>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+        Tap the 4 stones in order to compose the serene word <strong class="text-secondary font-headline-sm text-headline-sm">R • E • S • T</strong>:
+      </p>
+<!-- Practice Letters Form Bar -->
+<div class="w-full flex items-center justify-center">
+<div class="flex items-center gap-3 bg-surface-container-low px-5 py-2.5 rounded-full shadow-inner">
+<span class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-headline-tile text-headline-tile text-on-surface-variant transition-all duration-300" id="sb-slot-R">-</span>
+<span class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-headline-tile text-headline-tile text-on-surface-variant transition-all duration-300" id="sb-slot-E">-</span>
+<span class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-headline-tile text-headline-tile text-on-surface-variant transition-all duration-300" id="sb-slot-S">-</span>
+<span class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-headline-tile text-headline-tile text-on-surface-variant transition-all duration-300" id="sb-slot-T">-</span>
+</div>
+</div>
+<!-- Practice Clickable Letter Stone Row -->
+<div class="flex items-center justify-center gap-space-md py-1">
+<button class="w-13 h-13 px-4 py-3 rounded-full bg-surface-container-highest hover:bg-primary-container text-on-surface hover:text-on-primary-container font-headline-tile text-headline-tile shadow-lg transition-transform active:scale-90 flex items-center justify-center" id="tap-R" onclick="window.handleSandboxTap('R')">
+          R
+        </button>
+<button class="w-13 h-13 px-4 py-3 rounded-full bg-surface-container-highest hover:bg-primary-container text-on-surface hover:text-on-primary-container font-headline-tile text-headline-tile shadow-lg transition-transform active:scale-90 flex items-center justify-center" id="tap-E" onclick="window.handleSandboxTap('E')">
+          E
+        </button>
+<button class="w-13 h-13 px-4 py-3 rounded-full bg-surface-container-highest hover:bg-primary-container text-on-surface hover:text-on-primary-container font-headline-tile text-headline-tile shadow-lg transition-transform active:scale-90 flex items-center justify-center" id="tap-S" onclick="window.handleSandboxTap('S')">
+          S
+        </button>
+<button class="w-13 h-13 px-4 py-3 rounded-full bg-surface-container-highest hover:bg-primary-container text-on-surface hover:text-on-primary-container font-headline-tile text-headline-tile shadow-lg transition-transform active:scale-90 flex items-center justify-center" id="tap-T" onclick="window.handleSandboxTap('T')">
+          T
+        </button>
+</div>
+<!-- Discovery Feedback Badge (Hidden initially) -->
+<div class="hidden w-full p-space-sm rounded-DEFAULT bg-secondary-container text-on-secondary flex items-center justify-between shadow-md transition-all duration-300" id="sandboxSuccessBadge">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-headline-sm text-headline-sm">Word Discovered: REST!</span>
+</div>
+<div class="flex items-center gap-1 font-label-lg text-label-lg">
+<span class="material-symbols-outlined text-[16px]">monetization_on</span>
+<span>+10</span>
+</div>
+</div>
+</div>
+<!-- 6. Action Footer & Affirmation -->
+<div class="flex flex-col gap-space-md w-full pt-space-xs">
+<button class="w-full h-13 py-3.5 px-6 rounded-full bg-secondary hover:bg-secondary-fixed-dim text-on-secondary font-headline-sm text-headline-sm shadow-xl flex items-center justify-center gap-space-xs transition-transform active:scale-98" onclick="history.back()">
+<span>Got It! Begin Sanctuary Journey</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+<div class="flex items-center justify-between px-space-xs text-on-surface-variant font-label-md text-label-md">
+<button class="flex items-center gap-1 hover:text-primary transition-colors" onclick="window.restartDemo()">
+<span class="material-symbols-outlined text-[16px]">replay</span>
+          Replay Demo
+        </button>
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="accent-primary rounded w-4 h-4 bg-surface-container-high border-none" type="checkbox"/>
+<span>Do not show again</span>
+</label>
+</div>
+<div class="text-center pt-space-xs">
+<p class="font-body-md text-body-md text-on-surface-variant/80 italic">
+          “Quiet focus unlocks the hidden path.”
+        </p>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function initWordSanctuaryTutorial() {
+    // Autoplay Letter Trace Demo Simulation
+    let step = 0;
+    const nodes = {
+      0: { key: 'L', elem: document.getElementById('node-L'), x: '90px', y: '20px', slot: document.getElementById('slot-0') },
+      1: { key: 'E', elem: document.getElementById('node-E'), x: '160px', y: '90px', slot: document.getElementById('slot-1') },
+      2: { key: 'A', elem: document.getElementById('node-A'), x: '90px', y: '160px', slot: document.getElementById('slot-2') },
+      3: { key: 'F', elem: document.getElementById('node-F'), x: '20px', y: '90px', slot: document.getElementById('slot-3') }
+    };
+    const cursor = document.getElementById('touchCursor');
+    const beam = document.getElementById('activeBeam');
+    let loopTimer = null;
+
+    function resetDemoVisuals() {
+      if (beam) beam.setAttribute('stroke-dashoffset', '300');
+      for (let i = 0; i < 4; i++) {
+        if (nodes[i].elem) {
+          nodes[i].elem.className = "absolute w-12 h-12 rounded-full bg-surface-container-highest shadow-md flex items-center justify-center font-headline-tile text-headline-tile text-on-surface z-20 transition-all duration-300";
+          if (i === 0) nodes[i].elem.classList.add('top-4', 'left-1/2', '-translate-x-1/2');
+          if (i === 1) nodes[i].elem.classList.add('right-4', 'top-1/2', '-translate-y-1/2');
+          if (i === 2) nodes[i].elem.classList.add('bottom-4', 'left-1/2', '-translate-x-1/2');
+          if (i === 3) nodes[i].elem.classList.add('left-4', 'top-1/2', '-translate-y-1/2');
+        }
+        if (nodes[i].slot) {
+          nodes[i].slot.className = "w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center font-headline-sm text-headline-sm text-on-surface-variant transition-all duration-300";
+        }
+      }
+      if (cursor) {
+        cursor.style.left = '90px';
+        cursor.style.top = '20px';
+      }
+    }
+
+    function runDemoStep() {
+      if (!cursor || !beam) return;
+      if (step === 0) {
+        resetDemoVisuals();
+        // Activate L
+        nodes[0].elem.classList.remove('bg-surface-container-highest');
+        nodes[0].elem.classList.add('bg-primary-container', 'text-on-primary-container', 'scale-110', 'shadow-primary-container/50');
+        nodes[0].slot.classList.remove('bg-surface-variant', 'text-on-surface-variant');
+        nodes[0].slot.classList.add('bg-primary-container', 'text-on-primary-container');
+        cursor.style.left = nodes[0].x;
+        cursor.style.top = nodes[0].y;
+        beam.setAttribute('stroke-dashoffset', '230');
+      } else if (step === 1) {
+        // Activate E
+        nodes[1].elem.classList.remove('bg-surface-container-highest');
+        nodes[1].elem.classList.add('bg-primary-container', 'text-on-primary-container', 'scale-110');
+        nodes[1].slot.classList.remove('bg-surface-variant', 'text-on-surface-variant');
+        nodes[1].slot.classList.add('bg-primary-container', 'text-on-primary-container');
+        cursor.style.left = nodes[1].x;
+        cursor.style.top = nodes[1].y;
+        beam.setAttribute('stroke-dashoffset', '150');
+      } else if (step === 2) {
+        // Activate A
+        nodes[2].elem.classList.remove('bg-surface-container-highest');
+        nodes[2].elem.classList.add('bg-primary-container', 'text-on-primary-container', 'scale-110');
+        nodes[2].slot.classList.remove('bg-surface-variant', 'text-on-surface-variant');
+        nodes[2].slot.classList.add('bg-primary-container', 'text-on-primary-container');
+        cursor.style.left = nodes[2].x;
+        cursor.style.top = nodes[2].y;
+        beam.setAttribute('stroke-dashoffset', '75');
+      } else if (step === 3) {
+        // Activate F
+        nodes[3].elem.classList.remove('bg-surface-container-highest');
+        nodes[3].elem.classList.add('bg-secondary', 'text-on-secondary', 'scale-110');
+        nodes[3].slot.classList.remove('bg-surface-variant', 'text-on-surface-variant');
+        nodes[3].slot.classList.add('bg-secondary', 'text-on-secondary');
+        cursor.style.left = nodes[3].x;
+        cursor.style.top = nodes[3].y;
+        beam.setAttribute('stroke-dashoffset', '0');
+      } else if (step === 4) {
+        // Full completion celebration bounce
+        for (let i = 0; i < 4; i++) {
+          nodes[i].elem.classList.add('bg-secondary', 'text-on-secondary');
+          nodes[i].slot.classList.add('bg-secondary', 'text-on-secondary', 'scale-110');
+        }
+      }
+
+      step++;
+      if (step > 5) {
+        step = 0;
+      }
+    }
+
+    loopTimer = setInterval(runDemoStep, 900);
+    window.restartDemo = function() {
+      clearInterval(loopTimer);
+      step = 0;
+      resetDemoVisuals();
+      loopTimer = setInterval(runDemoStep, 900);
+    };
+
+    // 5. Interactive Practice Sandbox Logic
+    const expectedOrder = ['R', 'E', 'S', 'T'];
+    let typedLetters = [];
+
+    window.handleSandboxTap = function(letter) {
+      if (typedLetters.includes(letter)) return;
+      if (typedLetters.length < 4) {
+        typedLetters.push(letter);
+        const slotEl = document.getElementById('sb-slot-' + letter);
+        const btnEl = document.getElementById('tap-' + letter);
+        if (slotEl) {
+          slotEl.textContent = letter;
+          slotEl.className = "w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-tile text-headline-tile shadow-md transition-all duration-300 scale-105";
+        }
+        if (btnEl) {
+          btnEl.className = "w-13 h-13 px-4 py-3 rounded-full bg-primary-container text-on-primary-container font-headline-tile text-headline-tile shadow-inner flex items-center justify-center opacity-60 pointer-events-none";
+        }
+
+        // Check if fully formed REST
+        if (typedLetters.length === 4) {
+          const formed = typedLetters.join('');
+          const badge = document.getElementById('sandboxSuccessBadge');
+          if (formed === 'REST' && badge) {
+            badge.classList.remove('hidden');
+            for (let i = 0; i < 4; i++) {
+              const l = expectedOrder[i];
+              const s = document.getElementById('sb-slot-' + l);
+              if (s) {
+                s.className = "w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-headline-tile text-headline-tile shadow-lg scale-110 transition-all";
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const resetBtn = document.getElementById('resetSandboxBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        typedLetters = [];
+        const badge = document.getElementById('sandboxSuccessBadge');
+        if (badge) badge.classList.add('hidden');
+        expectedOrder.forEach(letter => {
+          const slot = document.getElementById('sb-slot-' + letter);
+          const btn = document.getElementById('tap-' + letter);
+          if (slot) {
+            slot.textContent = '-';
+            slot.className = "w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-headline-tile text-headline-tile text-on-surface-variant transition-all duration-300";
+          }
+          if (btn) {
+            btn.className = "w-13 h-13 px-4 py-3 rounded-full bg-surface-container-highest hover:bg-primary-container text-on-surface hover:text-on-primary-container font-headline-tile text-headline-tile shadow-lg transition-transform active:scale-90 flex items-center justify-center opacity-100 pointer-events-auto";
+          }
+        });
+      });
+    }
+  })();
+</script></main></body></html>
