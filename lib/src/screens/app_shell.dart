@@ -22,7 +22,10 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final screens = <Widget>[
       HomeScreen(player: widget.player),
-      ChaptersScreen(player: widget.player),
+      ChaptersScreen(
+        player: widget.player,
+        onGoHome: () => setState(() => _currentIndex = 0),
+      ),
       const MissionsScreen(),
       const SettingsScreen(),
     ];
@@ -38,46 +41,45 @@ class _AppShellState extends State<AppShell> {
 
   Widget _buildBottomNavigationBar() {
     return Container(
-      height: 72,
-      decoration: BoxDecoration(
-        color: AppColors.glassLine.withValues(alpha: 0.15),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: const BoxDecoration(
+        color: Color(0xFF081A1D),
+        border: Border(top: BorderSide(color: Color(0x14FFFFFF))),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(0, Icons.cottage_rounded, 'Home'),
-          _buildNavItem(1, Icons.menu_book_rounded, 'Chapters'),
-          _buildNavItem(2, Icons.military_tech_rounded, 'Missions'),
-          _buildNavItem(3, Icons.settings_rounded, 'Settings'),
-        ],
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 68,
+          child: Row(
+            children: <Widget>[
+              _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'Home'),
+              _buildNavItem(1, Icons.menu_book_outlined, Icons.menu_book_rounded, 'Chapters'),
+              _buildNavItem(2, Icons.emoji_events_outlined, Icons.emoji_events_rounded, 'Missions'),
+              _buildNavItem(3, Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isActive = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          Icon(
-            icon,
-            size: 24,
-            color: isActive ? AppColors.gold : AppColors.muted,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppText.label(
-              10,
-              weight: isActive ? FontWeight.w700 : FontWeight.w500,
-              color: isActive ? AppColors.gold : AppColors.muted,
+  Widget _buildNavItem(int index, IconData icon, IconData activeIcon, String label) {
+    final bool isActive = _currentIndex == index;
+    final Color color = isActive ? AppColors.teal : AppColors.muted;
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _currentIndex = index),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Icon(isActive ? activeIcon : icon, size: 26, color: color),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppText.label(12, weight: isActive ? 700 : 500, color: color),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

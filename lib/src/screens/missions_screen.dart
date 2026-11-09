@@ -1,7 +1,15 @@
-import 'package:flutter/material.dart';
-import 'package:wordnest/src/theme/wordnest_theme.dart';
-import 'package:wordnest/src/widgets/scenic_background.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:wordnest/src/data/missions.dart';
+import 'package:wordnest/src/theme/wordnest_theme.dart';
+import 'package:wordnest/src/widgets/panel_kit.dart';
+
+/// Missions & Quests: daily missions and long-term achievements.
+///
+/// UI step only: the progress numbers below are preview values. Step 2
+/// (functionality) replaces [_previewProgress] with real tracking and makes
+/// "Claim" credit coins and persist.
 class MissionsScreen extends StatefulWidget {
   const MissionsScreen({super.key});
 
@@ -10,300 +18,299 @@ class MissionsScreen extends StatefulWidget {
 }
 
 class _MissionsScreenState extends State<MissionsScreen> {
-  int _selectedTab = 0;
+  /// id -> current progress. Same numbers as the design mockup.
+  static const Map<String, int> _previewProgress = <String, int>{
+    'find_bonus_words': 5,
+    'solve_puzzles': 3,
+    'play_minutes': 7,
+    'no_hint_level': 0,
+    'lexicon_scholar': 112,
+    'chapter_clearer': 1,
+    'flawless_solver': 3,
+  };
+
+  int _tab = 0;
+  final Set<String> _claimed = <String>{};
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  String _resetsIn() {
+    final DateTime now = DateTime.now();
+    final DateTime midnight = DateTime(now.year, now.month, now.day + 1);
+    final Duration left = midnight.difference(now);
+    final int h = left.inHours;
+    final int m = left.inMinutes % 60;
+    return 'Resets in ${h}h ${m}m';
+  }
+
+  IconData _iconFor(String key) {
+    switch (key) {
+      case 'book':
+        return Icons.auto_stories_outlined;
+      case 'check':
+        return Icons.check_circle_outline_rounded;
+      case 'clock':
+        return Icons.schedule_rounded;
+      case 'target':
+        return Icons.track_changes_rounded;
+      case 'workspace_premium_rounded':
+        return Icons.workspace_premium_outlined;
+      case 'explore_rounded':
+        return Icons.explore_outlined;
+      case 'verified_rounded':
+        return Icons.verified_outlined;
+      default:
+        return Icons.star_outline_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.ink,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          const ScenicBackground(scrim: SceneScrim.home),
-          SafeArea(
+      backgroundColor: PanelColors.bgBottom,
+      body: PanelBackdrop(
+        child: SafeArea(
+          bottom: false,
+          child: PhoneFrame(
             child: Column(
-              children: [
-                _buildHeader(),
-                _buildTabBar(),
+              children: <Widget>[
+                ScreenHeader(
+                  title: 'Missions & Quests',
+                  trailing: _tab == 0
+                      ? HeaderPill(label: _resetsIn(), icon: Icons.schedule_rounded, iconColor: AppColors.cream)
+                      : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  child: _TabSwitch(
+                    index: _tab,
+                    labels: const <String>['Daily', 'Achievements'],
+                    onChanged: (int i) => setState(() => _tab = i),
+                  ),
+                ),
                 Expanded(
-                  child: _selectedTab == 0 ? _buildDailyMissions() : _buildAchievements(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Missions & Quests',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.cream,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.glassLine.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.hourglass_empty_rounded,
-                  size: 16,
-                  color: AppColors.gold,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '04h 28m',
-                  style: AppText.label(12, weight: 700, color: AppColors.gold),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedTab = 0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: _selectedTab == 0 ? AppColors.primaryContainer : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: Text(
-                    'Daily',
-                    style: AppText.label(
-                      14,
-                      weight: _selectedTab == 0 ? FontWeight.w700 : FontWeight.w500,
-                      color: _selectedTab == 0 ? AppColors.onPrimaryContainer : AppColors.muted,
-                    ),
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                    children: _tab == 0 ? _dailyCards() : _achievementCards(),
                   ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedTab = 1),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: _selectedTab == 1 ? AppColors.primaryContainer : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: Text(
-                    'Achievements',
-                    style: AppText.label(
-                      14,
-                      weight: _selectedTab == 1 ? FontWeight.w700 : FontWeight.w500,
-                      color: _selectedTab == 1 ? AppColors.onPrimaryContainer : AppColors.muted,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDailyMissions() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        // Daily missions would go here
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.secondaryContainer.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.auto_stories_rounded,
-                        size: 24,
-                        color: AppColors.gold,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Find 10 bonus words',
-                            style: AppText.quicksand(18, color: AppColors.cream),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Discover words outside the crossword grid',
-                            style: AppText.label(12, color: AppColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: 0.5,
-                  backgroundColor: AppColors.glassLine.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '5 / 10',
-                      style: AppText.label(12, weight: FontWeight.w700, color: AppColors.gold),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Claim reward
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Claim +50',
-                        style: AppText.label(12, weight: FontWeight.w700, color: AppColors.goldInk),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildAchievements() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        // Achievements would go here
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryContainer.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 24,
-                        color: AppColors.teal,
-                      ),
+  List<Widget> _dailyCards() {
+    return <Widget>[
+      for (final DailyMission m in MissionBook.dailyMissions)
+        _QuestCard(
+          icon: _iconFor(m.icon),
+          title: m.title,
+          subtitle: m.description,
+          reward: m.rewardCoins,
+          progress: _previewProgress[m.id] ?? 0,
+          target: m.target,
+          unit: m.unit,
+          claimed: _claimed.contains(m.id),
+          onClaim: () => setState(() => _claimed.add(m.id)),
+        ),
+    ];
+  }
+
+  List<Widget> _achievementCards() {
+    return <Widget>[
+      for (final Achievement a in MissionBook.achievements) _achievementCard(a),
+    ];
+  }
+
+  Widget _achievementCard(Achievement a) {
+    final int value = _previewProgress[a.id] ?? 0;
+    // First tier not yet reached; if all are reached, show the last one.
+    int tier = a.tiers.indexWhere((int t) => value < t);
+    if (tier == -1) tier = a.tiers.length - 1;
+    final String key = '${a.id}#$tier';
+    return _QuestCard(
+      icon: _iconFor(a.icon),
+      title: '${a.title} ${_roman(tier + 1)}',
+      subtitle: a.description,
+      reward: a.rewardCoins[tier],
+      progress: value,
+      target: a.tiers[tier],
+      unit: '',
+      claimed: _claimed.contains(key),
+      onClaim: () => setState(() => _claimed.add(key)),
+    );
+  }
+
+  String _roman(int n) => const <String>['', 'I', 'II', 'III', 'IV', 'V'][n.clamp(1, 5)];
+}
+
+class _TabSwitch extends StatelessWidget {
+  const _TabSwitch({required this.index, required this.labels, required this.onChanged});
+
+  final int index;
+  final List<String> labels;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 54,
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: PanelColors.pill,
+        borderRadius: BorderRadius.circular(27),
+      ),
+      child: Row(
+        children: <Widget>[
+          for (int i = 0; i < labels.length; i++)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: i == index ? AppColors.teal : Colors.transparent,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Text(
+                    labels[i],
+                    style: AppText.label(
+                      15,
+                      weight: 700,
+                      color: i == index ? AppColors.ink : AppColors.muted,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Lexicon Scholar III',
-                            style: AppText.quicksand(18, color: AppColors.cream),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Find 150 total bonus words in sanctuary',
-                            style: AppText.label(12, color: AppColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: 0.75,
-                  backgroundColor: AppColors.glassLine.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.teal),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestCard extends StatelessWidget {
+  const _QuestCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.reward,
+    required this.progress,
+    required this.target,
+    required this.unit,
+    required this.claimed,
+    required this.onClaim,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final int reward;
+  final int progress;
+  final int target;
+  final String unit;
+  final bool claimed;
+  final VoidCallback onClaim;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool done = progress >= target;
+    final String counter = unit.isEmpty ? '$progress / $target' : '$progress / $target $unit';
+
+    return PanelCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      child: Column(
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              IconTile(icon: icon, size: 46),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
                     Text(
-                      '112 / 150',
-                      style: AppText.label(12, weight: FontWeight.w700, color: AppColors.teal),
+                      title,
+                      style: AppText.quicksand(18, weight: 700, color: Colors.white),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Claim reward
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.teal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Claim +200',
-                        style: AppText.label(12, weight: FontWeight.w700, color: AppColors.ink),
-                      ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: AppText.label(13.5, weight: 500, color: AppColors.muted),
                     ),
                   ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 10),
+              _trailing(done),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              counter,
+              style: AppText.label(13.5, weight: 600, color: AppColors.muted),
             ),
           ),
+          const SizedBox(height: 8),
+          SlimProgress(value: target == 0 ? 0 : progress / target, height: 7),
+        ],
+      ),
+    );
+  }
+
+  Widget _trailing(bool done) {
+    if (claimed) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.teal),
+          const SizedBox(width: 5),
+          Text('Claimed', style: AppText.label(13.5, weight: 700, color: AppColors.teal)),
+        ],
+      );
+    }
+    if (done) {
+      return GestureDetector(
+        onTap: onClaim,
+        child: Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.gold,
+            borderRadius: BorderRadius.circular(23),
+          ),
+          child: Text(
+            'Claim +$reward',
+            style: AppText.quicksand(16, weight: 700, color: AppColors.goldInk),
+          ),
         ),
-      ],
+      );
+    }
+    return Text(
+      '+$reward',
+      style: AppText.quicksand(20, weight: 700, color: AppColors.gold),
     );
   }
 }

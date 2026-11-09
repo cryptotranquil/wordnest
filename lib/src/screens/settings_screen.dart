@@ -3,7 +3,7 @@ import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:wordnest/src/config/app_links.dart';
 import 'package:wordnest/src/state/settings_state.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
-import 'package:wordnest/src/widgets/scenic_background.dart';
+import 'package:wordnest/src/widgets/panel_kit.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showLanguageBottomSheet() async {
     await showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.glassLine.withValues(alpha: 0.9),
+      backgroundColor: PanelColors.card,
       builder: (context) {
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -66,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final settings = SettingsState.instance;
     final isEnabled = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: AppColors.glassLine.withValues(alpha: 0.9),
+      backgroundColor: PanelColors.card,
       isScrollControlled: true,
       builder: (context) {
         return Padding(
@@ -143,441 +143,337 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.ink,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          const ScenicBackground(scrim: SceneScrim.home),
-          SafeArea(
+      backgroundColor: PanelColors.bgBottom,
+      body: PanelBackdrop(
+        child: SafeArea(
+          bottom: false,
+          child: PhoneFrame(
             child: Column(
-              children: [
-                _buildHeader(),
+              children: <Widget>[
+                const ScreenHeader(
+                  title: 'Settings',
+                  trailing: HeaderPill(label: 'WordNest', icon: Icons.eco_rounded),
+                ),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                    children: <Widget>[
+                      _sectionLabel('Audio & Sensory'),
                       _buildAudioSection(),
+                      const SizedBox(height: 22),
+                      _sectionLabel('Appearance'),
                       _buildAppearanceSection(),
-                      _buildWordNestGuideSection(),
+                      const SizedBox(height: 22),
+                      _sectionLabel('WordNest Codex'),
+                      _buildCodexSection(),
+                      const SizedBox(height: 26),
+                      Center(
+                        child: Text(
+                          'WordNest v1.0.0',
+                          style: AppText.label(13, weight: 500, color: AppColors.muted),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _sectionLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Settings',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.cream,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.glassLine.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.spa_rounded,
-                  size: 16,
-                  color: AppColors.gold,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'WordNest',
-                  style: AppText.label(12, weight: FontWeight.w700, color: AppColors.gold),
-                ),
-              ],
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.fromLTRB(4, 0, 0, 10),
+      child: Text(
+        text.toUpperCase(),
+        style: AppText.label(
+          12.5,
+          weight: 700,
+          color: AppColors.teal,
+          letterSpacing: 1.6,
+        ),
       ),
     );
   }
+
+  Widget _divider() => const Divider(
+        height: 1,
+        thickness: 1,
+        indent: 16,
+        endIndent: 16,
+        color: PanelColors.divider,
+      );
 
   Widget _buildAudioSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            'Audio & Sensory',
-            style: AppText.label(14, weight: FontWeight.w700, color: AppColors.teal),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ListenableBuilder(
-            listenable: SettingsState.instance,
-            builder: (context, child) {
-              return Column(
-                children: [
-                  _buildToggleItem(
-                    icon: Icons.volume_up_rounded,
-                    title: 'Sound Effects',
-                    subtitle: 'Tile taps, chime resonances',
-                    value: SettingsState.instance.soundOn,
-                    onChanged: (value) => SettingsState.instance.setSoundOn(value),
-                  ),
-                  _buildToggleItem(
-                    icon: Icons.music_note_rounded,
-                    title: 'Ambient Harmonics',
-                    subtitle: 'Tranquil stream & gentle pads',
-                    value: SettingsState.instance.musicOn,
-                    onChanged: (value) => SettingsState.instance.setMusicOn(value),
-                  ),
-                  _buildSliderItem(
-                    icon: Icons.air_rounded,
-                    title: 'Music Volume',
-                    value: SettingsState.instance.musicVolume,
-                    onChanged: (value) => SettingsState.instance.setMusicVolume(value),
-                  ),
-                  _buildToggleItem(
-                    icon: Icons.vibration_rounded,
-                    title: 'Tactile Pulse',
-                    subtitle: 'Haptic rhythm on letter glide',
-                    value: SettingsState.instance.hapticsOn,
-                    onChanged: (value) => SettingsState.instance.setHapticsOn(value),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
+    return PanelCard(
+      child: ListenableBuilder(
+        listenable: SettingsState.instance,
+        builder: (BuildContext context, Widget? child) {
+          final SettingsState s = SettingsState.instance;
+          return Column(
+            children: <Widget>[
+              _toggleRow(
+                icon: Icons.volume_up_rounded,
+                title: 'Sound Effects',
+                subtitle: 'Tile taps, chime resonances',
+                value: s.soundOn,
+                onChanged: s.setSoundOn,
+              ),
+              _divider(),
+              _toggleRow(
+                icon: Icons.music_note_rounded,
+                title: 'Ambient Harmonics',
+                subtitle: 'Tranquil stream & gentle pads',
+                value: s.musicOn,
+                onChanged: s.setMusicOn,
+              ),
+              _divider(),
+              _volumeRow(s),
+              _divider(),
+              _toggleRow(
+                icon: Icons.vibration_rounded,
+                title: 'Tactile Pulse',
+                subtitle: 'Haptic rhythm on letter glide',
+                value: s.hapticsOn,
+                onChanged: s.setHapticsOn,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
   Widget _buildAppearanceSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            'Appearance',
-            style: AppText.label(14, weight: FontWeight.w700, color: AppColors.teal),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: ListenableBuilder(
-            listenable: SettingsState.instance,
-            builder: (context, child) {
-              return Column(
-                children: [
-                  _buildToggleItem(
-                    icon: Icons.accessibility,
-                    title: 'Reduce Motion',
-                    subtitle: 'Minimize animations and effects',
-                    value: SettingsState.instance.reduceMotion,
-                    onChanged: (value) => SettingsState.instance.setReduceMotion(value),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
+    return PanelCard(
+      child: ListenableBuilder(
+        listenable: SettingsState.instance,
+        builder: (BuildContext context, Widget? child) {
+          final SettingsState s = SettingsState.instance;
+          return _toggleRow(
+            icon: Icons.waves_rounded,
+            title: 'Reduce Motion',
+            subtitle: 'Minimize animations and effects',
+            value: s.reduceMotion,
+            onChanged: s.setReduceMotion,
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildWordNestGuideSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            'WordNest Codex',
-            style: AppText.label(14, weight: FontWeight.w700, color: AppColors.teal),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              _buildListItem(
+  Widget _buildCodexSection() {
+    final SettingsState s = SettingsState.instance;
+    return PanelCard(
+      child: ListenableBuilder(
+        listenable: s,
+        builder: (BuildContext context, Widget? child) {
+          final String reminderText = s.reminderEnabled
+              ? 'Daily ${_formatTime(s.reminderHour, s.reminderMinute)}'
+              : 'Off';
+          return Column(
+            children: <Widget>[
+              _navRow(
                 icon: Icons.menu_book_rounded,
                 title: "Seeker's Guide & Mechanics",
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text("Seeker's Guide"),
-                      content: const Text('A calm word cross puzzle. Swipe to connect letters and fill the crossword.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                onTap: () => _showInfo(
+                  "Seeker's Guide",
+                  'A calm word cross puzzle. Swipe to connect letters and fill the crossword. '
+                      'Bonus words that are not in the grid still earn you coins.',
+                ),
               ),
-              _buildListItem(
-                icon: Icons.help_rounded,
+              _divider(),
+              _navRow(
+                icon: Icons.help_outline_rounded,
                 title: 'How to Play',
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('How to Play'),
-                      content: const Text('Drag from one letter to the next to build a word. Any order, any direction.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                onTap: () => _showInfo(
+                  'How to Play',
+                  'Drag from one letter to the next to build a word. Any order, any direction.',
+                ),
               ),
-              _buildListItem(
-                icon: Icons.language_rounded,
+              _divider(),
+              _navRow(
+                icon: Icons.public_rounded,
                 title: 'Word Lexicon',
-                subtitle: 'English (US) • 85k Words',
-                trailing: 'EN',
+                subtitle: 'English (US) · 85k words',
                 onTap: _showLanguageBottomSheet,
               ),
-              _buildListItem(
-                icon: Icons.favorite_rounded,
+              _divider(),
+              _navRow(
+                icon: Icons.favorite_border_rounded,
                 title: 'Wellness Reminders',
-                subtitle: SettingsState.instance.reminderEnabled
-                    ? 'Daily ${SettingsState.instance.reminderHour.toString().padLeft(2, '0')}:${SettingsState.instance.reminderMinute.toString().padLeft(2, '0')} PM'
-                    : 'Off',
+                subtitle: reminderText,
                 onTap: _showWellnessReminderPicker,
               ),
-              _buildListItem(
-                icon: Icons.policy_rounded,
+              _divider(),
+              _navRow(
+                icon: Icons.shield_outlined,
                 title: 'Privacy & Terms',
                 onTap: () => _launchUrl(AppLinks.privacyPolicy),
               ),
             ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatTime(int hour, int minute) {
+    final int h12 = hour % 12 == 0 ? 12 : hour % 12;
+    final String suffix = hour >= 12 ? 'PM' : 'AM';
+    return '$h12:${minute.toString().padLeft(2, '0')} $suffix';
+  }
+
+  Future<void> _showInfo(String title, String body) {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: PanelColors.card,
+        title: Text(title, style: AppText.quicksand(20, weight: 700)),
+        content: Text(body, style: AppText.label(14, weight: 500, color: AppColors.muted)),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: Text(
-            'WordNest v1.0.0',
-            style: AppText.label(12, color: AppColors.muted),
-          ),
-        ),
+        ],
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------------ rows
+
+  Widget _rowText(String title, String? subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(title, style: AppText.quicksand(17, weight: 700, color: Colors.white)),
+        if (subtitle != null) ...<Widget>[
+          const SizedBox(height: 3),
+          Text(subtitle, style: AppText.label(13, weight: 500, color: AppColors.muted)),
+        ],
       ],
     );
   }
 
-  Widget _buildToggleItem({
+  Widget _toggleRow({
     required IconData icon,
     required String title,
-    String? subtitle,
+    required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          onChanged(!value);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.glassLine.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: AppColors.teal,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppText.quicksand(16, color: AppColors.cream),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(24),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: <Widget>[
+            IconTile(icon: icon),
+            const SizedBox(width: 14),
+            Expanded(child: _rowText(title, subtitle)),
+            const SizedBox(width: 8),
+            _toggle(value, onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _toggle(bool value, ValueChanged<bool> onChanged) {
+    return Switch(
+      value: value,
+      onChanged: onChanged,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+        return states.contains(WidgetState.selected)
+            ? PanelColors.bgBottom
+            : const Color(0xFFC9D2D2);
+      }),
+      trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+        return states.contains(WidgetState.selected)
+            ? AppColors.teal
+            : const Color(0xFF3A4B4C);
+      }),
+      trackOutlineColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+    );
+  }
+
+  Widget _volumeRow(SettingsState s) {
+    final int pct = (s.musicVolume * 100).round();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const IconTile(icon: Icons.tune_rounded),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(top: 11),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          'Music Volume',
+                          style: AppText.quicksand(17, weight: 700, color: Colors.white),
+                        ),
+                      ),
                       Text(
-                        subtitle,
-                        style: AppText.label(12, color: AppColors.muted),
+                        '$pct%',
+                        style: AppText.label(13.5, weight: 600, color: AppColors.muted),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              Switch(
-                value: value,
-                thumbColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return AppColors.teal;
-                  }
-                  return null;
-                }),
-                onChanged: onChanged,
-              ),
-            ],
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 6,
+                    activeTrackColor: AppColors.teal,
+                    inactiveTrackColor: PanelColors.track,
+                    thumbColor: Colors.white,
+                    overlayColor: AppColors.teal.withValues(alpha: 0.12),
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                    trackShape: const RoundedRectSliderTrackShape(),
+                  ),
+                  child: Slider(
+                    value: s.musicVolume.clamp(0.0, 1.0),
+                    onChanged: s.setMusicVolume,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildSliderItem({
-    required IconData icon,
-    required String title,
-    required double value,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          onChanged(value);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.glassLine.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: AppColors.teal,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppText.quicksand(16, color: AppColors.cream),
-                    ),
-                  ],
-                ),
-              ),
-              Slider(
-                value: value,
-                thumbColor: AppColors.teal,
-                inactiveColor: AppColors.glassLine.withValues(alpha: 0.3),
-                onChanged: onChanged,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListItem({
+  Widget _navRow({
     required IconData icon,
     required String title,
     String? subtitle,
-    String? trailing,
-    VoidCallback? onTap,
+    required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.glassLine.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: AppColors.teal,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppText.quicksand(16, color: AppColors.cream),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: AppText.label(12, color: AppColors.muted),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                Text(
-                  trailing,
-                  style: AppText.label(14, weight: FontWeight.w700, color: AppColors.teal),
-                ),
-              ],
-              if (onTap != null) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 24,
-                  color: AppColors.muted,
-                ),
-              ],
-            ],
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: <Widget>[
+            IconTile(icon: icon),
+            const SizedBox(width: 14),
+            Expanded(child: _rowText(title, subtitle)),
+            const Icon(Icons.chevron_right_rounded, size: 26, color: AppColors.muted),
+          ],
         ),
       ),
     );

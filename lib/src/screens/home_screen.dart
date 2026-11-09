@@ -12,6 +12,7 @@ import '../widgets/scenic_background.dart';
 import '../widgets/today_panel.dart';
 import 'daily_reward_screen.dart';
 import 'gameplay_screen.dart';
+import 'shop_screen.dart';
 
 /// Home: brand, the current chapter's play disc and one Today panel.
 class HomeScreen extends StatefulWidget {
@@ -135,15 +136,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Wordmark(),
                           CoinPill(
                             coins: widget.player.coins,
-                            onAdd: () => _notify(
-                              'The coin shop is not designed yet.',
+                            onAdd: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ShopScreen(player: widget.player),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
                     Expanded(
-                      child: Column(
+                      child: LayoutBuilder(
+                        builder: (BuildContext context, BoxConstraints box) => SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: box.maxHeight),
+                            child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           Row(
@@ -289,6 +296,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     Padding(

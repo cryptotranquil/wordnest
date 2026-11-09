@@ -7,6 +7,9 @@ class DailyMission {
   final int rewardHints;
   final String icon;
 
+  /// Shown after the progress numbers, e.g. "7 / 10 min".
+  final String unit;
+
   const DailyMission({
     required this.id,
     required this.title,
@@ -15,6 +18,7 @@ class DailyMission {
     required this.rewardCoins,
     required this.rewardHints,
     required this.icon,
+    this.unit = '',
   });
 }
 
@@ -43,29 +47,39 @@ class MissionBook {
     DailyMission(
       id: 'find_bonus_words',
       title: 'Find 10 bonus words',
-      description: 'Discover words outside the crossword grid',
+      description: 'Discover words outside the grid',
       target: 10,
       rewardCoins: 50,
       rewardHints: 0,
-      icon: 'auto_stories_rounded',
+      icon: 'book',
     ),
     DailyMission(
-      id: 'solve_without_hints',
-      title: 'Solve 3 puzzles without hints',
-      description: 'Embrace calm focus and intuition',
+      id: 'solve_puzzles',
+      title: 'Solve 3 puzzles',
+      description: 'Complete any three levels',
       target: 3,
       rewardCoins: 30,
-      rewardHints: 1,
-      icon: 'self_improvement_rounded',
+      rewardHints: 0,
+      icon: 'check',
     ),
     DailyMission(
-      id: 'complete_level',
-      title: 'Complete 1 Daily Puzzle',
-      description: 'Keep your 7-day devotion alive',
+      id: 'play_minutes',
+      title: 'Play for 10 minutes',
+      description: 'Keep going across any levels',
+      target: 10,
+      rewardCoins: 20,
+      rewardHints: 0,
+      icon: 'clock',
+      unit: 'min',
+    ),
+    DailyMission(
+      id: 'no_hint_level',
+      title: 'Finish a level, no hints',
+      description: 'Solve one without any help',
       target: 1,
       rewardCoins: 40,
       rewardHints: 0,
-      icon: 'local_fire_department_rounded',
+      icon: 'target',
     ),
   ];
 
