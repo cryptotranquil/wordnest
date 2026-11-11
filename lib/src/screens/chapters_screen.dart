@@ -37,7 +37,7 @@ class ChaptersScreen extends StatelessWidget {
                 Text('Your journey, one word at a time', style: AppText.label(12, color: AppColors.muted)),
                 const SizedBox(height: 24),
                 for (final chapter in ChapterBook.chapters) ...[
-                  _ChapterCard(chapter: chapter, currentLevel: player.currentLevel),
+                  _ChapterCard(chapter: chapter, currentLevel: player.currentLevel, finishedJourney: player.finishedJourney),
                   _JourneyPath(chapter: chapter, player: player),
                 ],
               ],
@@ -67,13 +67,14 @@ class _JourneyBadge extends StatelessWidget {
 }
 
 class _ChapterCard extends StatelessWidget {
-  const _ChapterCard({required this.chapter, required this.currentLevel});
+  const _ChapterCard({required this.chapter, required this.currentLevel, required this.finishedJourney});
   final Chapter chapter;
   final int currentLevel;
+  final bool finishedJourney;
 
   @override
   Widget build(BuildContext context) {
-    final isCurrent = currentLevel >= chapter.levelStart && currentLevel <= chapter.levelEnd;
+    final isCurrent = !finishedJourney && currentLevel >= chapter.levelStart && currentLevel <= chapter.levelEnd;
     final isLocked = currentLevel < chapter.levelStart;
     final palette = switch (chapter.themeKey) {
       'ocean' => ScenePalette.dusk,
@@ -116,8 +117,7 @@ class _JourneyPath extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final count = chapter.levelEnd - chapter.levelStart + 1;
-    // Only actual levels can open. LevelBook's fallback would otherwise open a
-    // different puzzle under the number the player tapped.
+    // Only actual levels can open; future chapter content may not be shipped yet.
     final available = LevelBook.all.map((level) => level.number).toSet();
     return LayoutBuilder(builder: (context, constraints) {
       final width = constraints.maxWidth;
@@ -135,6 +135,7 @@ class _JourneyPath extends StatelessWidget {
               child: _LevelNode(
                 level: chapter.levelStart + i,
                 currentLevel: player.currentLevel,
+                finishedJourney: player.finishedJourney,
                 available: available.contains(chapter.levelStart + i),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                   builder: (_) => GameplayScreen(level: LevelBook.level(chapter.levelStart + i), player: player),
@@ -148,16 +149,17 @@ class _JourneyPath extends StatelessWidget {
 }
 
 class _LevelNode extends StatelessWidget {
-  const _LevelNode({required this.level, required this.currentLevel, required this.available, required this.onTap});
+  const _LevelNode({required this.level, required this.currentLevel, required this.finishedJourney, required this.available, required this.onTap});
   final int level;
   final int currentLevel;
+  final bool finishedJourney;
   final bool available;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final current = level == currentLevel && available;
-    final cleared = level < currentLevel && available;
+    final current = level == currentLevel && available && !finishedJourney;
+    final cleared = (level < currentLevel || (finishedJourney && level == currentLevel)) && available;
     final playable = available && level <= currentLevel;
     final label = !available ? 'Coming soon' : current ? 'Current' : cleared ? 'Replay' : 'Locked';
     return Semantics(

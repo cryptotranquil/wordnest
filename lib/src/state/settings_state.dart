@@ -127,25 +127,25 @@ class SettingsState extends ChangeNotifier {
 /// Helper to trigger haptic feedback with settings awareness.
 class HapticHelper {
   static void lightImpact() {
-    if (SettingsState.instance.hapticsOn && !SettingsState.instance.reduceMotion) {
+    if (SettingsState.instance.hapticsOn) {
       HapticFeedback.lightImpact();
     }
   }
 
   static void mediumImpact() {
-    if (SettingsState.instance.hapticsOn && !SettingsState.instance.reduceMotion) {
+    if (SettingsState.instance.hapticsOn) {
       HapticFeedback.mediumImpact();
     }
   }
 
   static void heavyImpact() {
-    if (SettingsState.instance.hapticsOn && !SettingsState.instance.reduceMotion) {
+    if (SettingsState.instance.hapticsOn) {
       HapticFeedback.heavyImpact();
     }
   }
 
   static void selectionClick() {
-    if (SettingsState.instance.hapticsOn && !SettingsState.instance.reduceMotion) {
+    if (SettingsState.instance.hapticsOn) {
       HapticFeedback.selectionClick();
     }
   }

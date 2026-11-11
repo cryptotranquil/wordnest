@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:wordnest/src/config/app_links.dart';
 import 'package:wordnest/src/state/settings_state.dart';
+import 'package:wordnest/src/services/sound_service.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -130,7 +131,10 @@ class _ToggleRow extends StatelessWidget {
     child: Row(children: [
       _SettingsIcon(icon), const SizedBox(width: 12),
       Expanded(child: _RowText(title, subtitle)),
-      Switch(value: value, onChanged: onChanged, activeTrackColor: AppColors.teal, activeThumbColor: AppColors.ink),
+      Switch(value: value, onChanged: (newValue) {
+        onChanged(newValue);
+        SoundService.instance.play(SoundId.toggle);
+      }, activeTrackColor: AppColors.teal, activeThumbColor: AppColors.ink),
     ]),
   );
 }

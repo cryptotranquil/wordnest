@@ -125,6 +125,7 @@ class DailyRewardService {
       day: day,
       cycle: cycle,
     );
+    player.save();
 
     return reward;
   }

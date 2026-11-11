@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../state/settings_state.dart';
 
 import '../theme/wordnest_theme.dart';
 
@@ -69,7 +69,7 @@ class _LetterWheelState extends State<LetterWheel> {
     if (_path.length >= 2 && _path[_path.length - 2] == hit) {
       setState(_path.removeLast);
       widget.onChanged(_word);
-      HapticFeedback.selectionClick();
+      HapticHelper.selectionClick();
       return;
     }
 
@@ -77,7 +77,7 @@ class _LetterWheelState extends State<LetterWheel> {
 
     setState(() => _path.add(hit));
     widget.onChanged(_word);
-    HapticFeedback.selectionClick();
+    HapticHelper.selectionClick();
   }
 
   String get _word => _path.map((i) => widget.letters[i]).join();

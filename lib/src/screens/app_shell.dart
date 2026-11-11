@@ -4,6 +4,7 @@ import 'package:wordnest/src/screens/home_screen.dart';
 import 'package:wordnest/src/screens/missions_screen.dart';
 import 'package:wordnest/src/screens/settings_screen.dart';
 import 'package:wordnest/src/state/player_state.dart';
+import 'package:wordnest/src/services/sound_service.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
 
 class AppShell extends StatefulWidget {
@@ -21,9 +22,9 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: [
-        HomeScreen(player: widget.player),
+        HomeScreen(player: widget.player, onMissions: () => setState(() => _currentIndex = 2)),
         ChaptersScreen(player: widget.player),
-        const MissionsScreen(),
+        MissionsScreen(player: widget.player),
         const SettingsScreen(),
       ]),
       bottomNavigationBar: Container(
@@ -48,7 +49,10 @@ class _AppShellState extends State<AppShell> {
       button: true,
       label: label,
       child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
+        onTap: () {
+          SoundService.instance.play(SoundId.uiTap);
+          setState(() => _currentIndex = index);
+        },
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(icon, size: 24, color: active ? AppColors.teal : AppColors.muted),
           const SizedBox(height: 4),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/daily_rewards.dart';
 import '../state/daily_reward_service.dart';
+import '../services/sound_service.dart';
 import '../state/player_state.dart';
 import '../theme/wordnest_theme.dart';
 import '../widgets/capsules.dart';
@@ -51,7 +52,8 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
     while (true) {
       final now = DateTime.now().microsecondsSinceEpoch;
       final elapsed = (now - startTime) / 1000000;
-      final t = (elapsed / duration.inSeconds).clamp(0.0, 1.0);
+      final t = (elapsed / (duration.inMilliseconds / 1000)).clamp(0.0, 1.0);
+      if (!mounted) return;
 
       if (t >= 1) {
         setState(() {
@@ -80,6 +82,7 @@ class _DailyRewardScreenState extends State<DailyRewardScreen> {
       return;
     }
 
+    SoundService.instance.play(SoundId.rewardClaim);
     if (mounted) {
       _playBurst(context, Offset.infinite);
     }

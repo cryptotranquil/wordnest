@@ -1,7 +1,12 @@
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../state/settings_state.dart';
+import '../state/stats_state.dart';
+import '../services/music_service.dart';
+import '../services/sound_service.dart';
+import '../data/chapter.dart';
 
 import '../data/levels.dart';
 import '../models/level.dart';
@@ -32,8 +37,10 @@ class GameplayScreen extends StatefulWidget {
   State<GameplayScreen> createState() => _GameplayScreenState();
 }
 
-class _GameplayScreenState extends State<GameplayScreen> {
+class _GameplayScreenState extends State<GameplayScreen> with WidgetsBindingObserver {
   late final GameController _game;
+  final Stopwatch _playClock = Stopwatch();
+  Timer? _playTimer;
   final GlobalKey _wheelKey = GlobalKey();
   final GlobalKey _boardKey = GlobalKey();
   final GlobalKey _bonusKey = GlobalKey();
@@ -65,6 +72,11 @@ class _GameplayScreenState extends State<GameplayScreen> {
   void initState() {
     super.initState();
     _game = GameController(level: widget.level, player: widget.player);
+    WidgetsBinding.instance.addObserver(this);
+    _playClock.start();
+    _playTimer = Timer.periodic(const Duration(seconds: 5), (_) => _flushPlayTime());
+    final chapter = ChapterBook.chapterForLevel(widget.level.number);
+    if (chapter != null) MusicService.instance.playForChapter(chapter.id - 1);
     _tutorialActive = !widget.player.tutorialSeen;
     if (_tutorialActive) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _captureTargets());
@@ -73,8 +85,32 @@ class _GameplayScreenState extends State<GameplayScreen> {
 
   @override
   void dispose() {
+    _flushPlayTime();
+    _playClock.stop();
+    _playTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    final chapter = ChapterBook.chapterForLevel(widget.player.currentLevel);
+    if (chapter != null) MusicService.instance.playForChapter(chapter.id - 1);
     _game.dispose();
     super.dispose();
+  }
+
+  void _flushPlayTime() {
+    final seconds = _playClock.elapsed.inSeconds;
+    if (seconds > 0) {
+      StatsState.instance.recordPlaySeconds(seconds);
+      _playClock.reset();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (!_sheetShown) _playClock.start();
+    } else {
+      _flushPlayTime();
+      _playClock.stop();
+    }
   }
 
   // ---------------------------------------------------------------- tutorial
@@ -118,7 +154,7 @@ class _GameplayScreenState extends State<GameplayScreen> {
   void _submit(String word) {
     _game.submitWord(word);
     if (_game.feedback == WordFeedback.invalid) {
-      HapticFeedback.mediumImpact();
+      HapticHelper.mediumImpact();
     }
     if (_game.isComplete) _completeLevel();
   }
@@ -126,11 +162,20 @@ class _GameplayScreenState extends State<GameplayScreen> {
   void _completeLevel() {
     if (_sheetShown) return;
     _sheetShown = true;
+    _flushPlayTime();
+    _playClock.stop();
     _game.awardCompletion();
     final next = LevelBook.nextLevelAfter(widget.level.number);
     // Replaying an earlier puzzle must not send the player backwards.
-    if (next != null && widget.level.number == widget.player.currentLevel) {
-      widget.player.setCurrentLevel(next);
+    if (widget.level.number == widget.player.currentLevel) {
+      if (next != null) {
+        widget.player.setCurrentLevel(next);
+        if (ChapterBook.chapterForLevel(next)?.id != ChapterBook.chapterForLevel(widget.level.number)?.id) {
+          SoundService.instance.play(SoundId.chapterUnlock);
+        }
+      } else {
+        widget.player.markJourneyFinished();
+      }
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => _openCompleteSheet());
   }
@@ -298,7 +343,11 @@ class _GameplayScreenState extends State<GameplayScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          const ScenicBackground(),
+          ScenicBackground(palette: switch (ChapterBook.chapterForLevel(widget.level.number)?.themeKey) {
+            'ocean' => ScenePalette.dusk,
+            'cosmos' => ScenePalette.night,
+            _ => ScenePalette.dawn,
+          }),
           SafeArea(
             child: AnimatedBuilder(
               animation: Listenable.merge(<Listenable>[_game, widget.player]),
