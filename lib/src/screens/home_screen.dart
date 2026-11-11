@@ -28,7 +28,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final DailyRewardService _rewardService;
+  late DailyRewardService _rewardService;
   Timer? _resetTimer;
 
   @override

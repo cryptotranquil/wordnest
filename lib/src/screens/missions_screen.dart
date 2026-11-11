@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:wordnest/src/data/missions.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
-import 'package:wordnest/src/widgets/scenic_background.dart';
 
+/// Mission tracking and claiming are not wired up yet. The cards deliberately
+/// show no invented progress or claim buttons until that work is implemented.
 class MissionsScreen extends StatefulWidget {
   const MissionsScreen({super.key});
 
@@ -16,294 +18,113 @@ class _MissionsScreenState extends State<MissionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.ink,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          const ScenicBackground(scrim: SceneScrim.home),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                _buildTabBar(),
-                Expanded(
-                  child: _selectedTab == 0 ? _buildDailyMissions() : _buildAchievements(),
-                ),
-              ],
+      body: SafeArea(
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Row(children: [
+              Expanded(child: Text('Missions & Quests', style: AppText.quicksand(24, weight: 700))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(color: AppColors.glassLine.withValues(alpha: .6), borderRadius: BorderRadius.circular(30)),
+                child: Text('Coming soon', style: AppText.label(10, color: AppColors.muted)),
+              ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(color: const Color(0xFF1B3838), borderRadius: BorderRadius.circular(40)),
+              child: Row(children: [
+                _tab('Daily', 0),
+                _tab('Achievements', 1),
+              ]),
             ),
           ),
-        ],
+          Expanded(child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text('Progress and rewards are coming in a future update.', style: AppText.label(12, color: AppColors.muted)),
+              ),
+              if (_selectedTab == 0) ...[
+                const _MissionCard(icon: Icons.menu_book_outlined, title: 'Find 10 bonus words', description: 'Discover words outside the grid', reward: 50),
+                const _MissionCard(icon: Icons.check_circle_outline, title: 'Solve 3 puzzles', description: 'Complete any three levels', reward: 30),
+                const _MissionCard(icon: Icons.access_time_rounded, title: 'Play for 10 minutes', description: 'Keep going across any levels', reward: 20),
+                const _MissionCard(icon: Icons.track_changes_rounded, title: 'Finish a level, no hints', description: 'Solve one without any help', reward: 40),
+              ] else ...[
+                for (final achievement in MissionBook.achievements)
+                  _MissionCard(
+                    icon: Icons.workspace_premium_outlined,
+                    title: achievement.title,
+                    description: achievement.description,
+                    reward: achievement.rewardCoins.first,
+                  ),
+              ],
+            ],
+          )),
+        ]),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Missions & Quests',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.cream,
-            ),
-          ),
+  Widget _tab(String title, int index) {
+    final selected = _selectedTab == index;
+    return Expanded(child: Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(40),
+        onTap: () => setState(() => _selectedTab = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(color: selected ? AppColors.teal : Colors.transparent, borderRadius: BorderRadius.circular(40)),
+          alignment: Alignment.center,
+          child: Text(title, style: AppText.label(14, weight: 700, color: selected ? AppColors.ink : AppColors.muted)),
+        ),
+      ),
+    ));
+  }
+}
+
+class _MissionCard extends StatelessWidget {
+  const _MissionCard({required this.icon, required this.title, required this.description, required this.reward});
+  final IconData icon;
+  final String title;
+  final String description;
+  final int reward;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: const Color(0xFF123130), borderRadius: BorderRadius.circular(20)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.glassLine.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.hourglass_empty_rounded,
-                  size: 16,
-                  color: AppColors.gold,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '04h 28m',
-                  style: AppText.label(12, weight: 700, color: AppColors.gold),
-                ),
-              ],
-            ),
+            width: 48, height: 48,
+            decoration: BoxDecoration(color: const Color(0xFF204947), borderRadius: BorderRadius.circular(14)),
+            child: Icon(icon, color: AppColors.teal, size: 24),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedTab = 0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: _selectedTab == 0 ? AppColors.primaryContainer : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: Text(
-                    'Daily',
-                    style: AppText.label(
-                      14,
-                      weight: _selectedTab == 0 ? FontWeight.w700 : FontWeight.w500,
-                      color: _selectedTab == 0 ? AppColors.onPrimaryContainer : AppColors.muted,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedTab = 1),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: _selectedTab == 1 ? AppColors.primaryContainer : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Center(
-                  child: Text(
-                    'Achievements',
-                    style: AppText.label(
-                      14,
-                      weight: _selectedTab == 1 ? FontWeight.w700 : FontWeight.w500,
-                      color: _selectedTab == 1 ? AppColors.onPrimaryContainer : AppColors.muted,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDailyMissions() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        // Daily missions would go here
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.secondaryContainer.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.auto_stories_rounded,
-                        size: 24,
-                        color: AppColors.gold,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Find 10 bonus words',
-                            style: AppText.quicksand(18, color: AppColors.cream),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Discover words outside the crossword grid',
-                            style: AppText.label(12, color: AppColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: 0.5,
-                  backgroundColor: AppColors.glassLine.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '5 / 10',
-                      style: AppText.label(12, weight: FontWeight.w700, color: AppColors.gold),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Claim reward
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Claim +50',
-                        style: AppText.label(12, weight: FontWeight.w700, color: AppColors.goldInk),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAchievements() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        // Achievements would go here
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryContainer.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 24,
-                        color: AppColors.teal,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Lexicon Scholar III',
-                            style: AppText.quicksand(18, color: AppColors.cream),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Find 150 total bonus words in sanctuary',
-                            style: AppText.label(12, color: AppColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: 0.75,
-                  backgroundColor: AppColors.glassLine.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.teal),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '112 / 150',
-                      style: AppText.label(12, weight: FontWeight.w700, color: AppColors.teal),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Claim reward
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.teal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Claim +200',
-                        style: AppText.label(12, weight: FontWeight.w700, color: AppColors.ink),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: AppText.quicksand(16, weight: 700)),
+            const SizedBox(height: 3),
+            Text(description, style: AppText.label(11, weight: 500, color: AppColors.muted)),
+          ])),
+          const SizedBox(width: 6),
+          Text('+$reward', style: AppText.label(15, weight: 700, color: AppColors.gold)),
+        ]),
+        const SizedBox(height: 18),
+        Align(alignment: Alignment.centerRight, child: Text('—', style: AppText.label(12, color: AppColors.muted))),
+        const SizedBox(height: 8),
+        ClipRRect(borderRadius: BorderRadius.circular(8), child: const LinearProgressIndicator(
+          value: 0, minHeight: 6, backgroundColor: Color(0xFF325451), valueColor: AlwaysStoppedAnimation<Color>(AppColors.teal),
+        )),
+      ]),
     );
   }
 }
