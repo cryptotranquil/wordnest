@@ -7,17 +7,20 @@ import 'package:collection/collection.dart';
 import '../models/level.dart';
 import '../services/sound_service.dart';
 import 'player_state.dart';
+import 'stats_state.dart';
 
 enum WordFeedback { none, invalid, duplicate }
 
 /// Rules and state for a single level: swiping words, filling the grid,
 /// spending coins on boosters and scoring the level.
 class GameController extends ChangeNotifier {
-  GameController({required this.level, required this.player})
-      : _wheelOrder = List<int>.generate(level.letters.length, (i) => i);
+  GameController({required this.level, required this.player, StatsState? stats})
+      : stats = stats ?? StatsState.instance,
+        _wheelOrder = List<int>.generate(level.letters.length, (i) => i);
 
   final Level level;
   final PlayerState player;
+  final StatsState stats;
 
   static const int hintCost = 100;
   static const int targetCost = 150;
@@ -92,15 +95,15 @@ class GameController extends ChangeNotifier {
 
   /// Called by the wheel while the player is dragging.
   void setInput(String value) {
+    if (_input == value) return;
     // Calculate how many letters changed
     int letterCount = 0;
     if (value.isNotEmpty) {
       letterCount = value.length;
     }
-    if (letterCount > 0 && letterCount <= 7) {
+    if (letterCount > _input.length && letterCount <= 7) {
       SoundService.instance.playLetter(letterCount);
     }
-    if (_input == value) return;
     _input = value;
     notifyListeners();
   }
@@ -112,6 +115,7 @@ class GameController extends ChangeNotifier {
     clearHighlight();
 
     if (word.length < 3) {
+      _attempts++;
       SoundService.instance.play(SoundId.uiTap);
       _flash(WordFeedback.invalid);
       return;
@@ -132,6 +136,7 @@ class GameController extends ChangeNotifier {
 
     if (level.bonusWords.contains(word) && !foundBonus.contains(word)) {
       foundBonus.add(word);
+      stats.recordBonus();
       _attempts++;
       _accepted++;
       _feedback = WordFeedback.none;
@@ -154,10 +159,6 @@ class GameController extends ChangeNotifier {
   /// Reveals one letter of the next unsolved word. Returns false when the
   /// player cannot afford it. Uses free hint tokens first, then coins.
   bool revealWithHint() {
-    // Try free hint token first
-    final bool usedFreeToken = player.useHintToken();
-    if (!usedFreeToken && player.coins < hintCost) return false;
-
     final word = _nextUnsolvedWord();
     if (word == null) return false;
 
@@ -165,9 +166,12 @@ class GameController extends ChangeNotifier {
         .where((c) => !solvedCells.contains(c.key) && !revealedCells.contains(c.key))
         .toList();
     if (candidates.isEmpty) return false;
+    final bool usedFreeToken = player.useHintToken();
+    if (!usedFreeToken && player.coins < hintCost) return false;
 
     revealedCells.add(candidates.first.key);
     _hintsUsed++;
+    stats.recordHint();
 
     // Spend coin if no free token was available
     if (!usedFreeToken) {
@@ -183,12 +187,10 @@ class GameController extends ChangeNotifier {
   /// Returns false when the player cannot afford it. Uses free target tokens
   /// first, then coins.
   bool highlightWithTarget() {
-    // Try free target token first
-    final bool usedFreeToken = player.useTargetToken();
-    if (!usedFreeToken && player.coins < targetCost) return false;
-
     final word = _nextUnsolvedWord();
     if (word == null) return false;
+    final bool usedFreeToken = player.useTargetToken();
+    if (!usedFreeToken && player.coins < targetCost) return false;
 
     highlightedCells
       ..clear()
@@ -230,8 +232,9 @@ class GameController extends ChangeNotifier {
 
   /// Credits the level reward exactly once.
   void awardCompletion() {
-    if (_awarded) return;
+    if (_awarded || !isComplete) return;
     _awarded = true;
+    stats.recordCompletion(noHints: earnedMastery, flawless: precision == 1);
     _coinsAwarded = baseReward + (earnedLexicon ? lexiconReward : 0);
     player.credit(_coinsAwarded);
     SoundService.instance.play(SoundId.levelComplete);

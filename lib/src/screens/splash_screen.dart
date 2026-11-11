@@ -14,9 +14,10 @@ import 'app_shell.dart';
 /// Wordnest lockup over the chapter scenery, with a loading bar that
 /// auto-advances to Home — no button, as decided for the MVP.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key, required this.player});
+  const SplashScreen({super.key, required this.player, this.ready});
 
   final PlayerState player;
+  final Future<void>? ready;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -62,7 +63,16 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  void _goHome() {
+  Future<void> _goHome() async {
+    try {
+      await widget.ready;
+    } catch (error) {
+      debugPrint('Startup failed: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not load saved progress. Please restart the app.')));
+      }
+      return;
+    }
     if (!mounted) return;
 
     final service = DailyRewardService(

@@ -6,6 +6,7 @@ import 'package:wordnest/src/screens/missions_screen.dart';
 import 'package:wordnest/src/screens/settings_screen.dart';
 import 'package:wordnest/src/state/player_state.dart';
 import 'package:wordnest/src/state/settings_state.dart';
+import 'package:wordnest/src/state/stats_state.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
 
 void main() {
@@ -15,11 +16,11 @@ void main() {
 
   Widget app(Widget screen) => MaterialApp(theme: buildWordnestTheme(), home: screen);
 
-  testWidgets('journey scrolls vertically and marks unavailable levels', (tester) async {
+  testWidgets('journey scrolls vertically and marks locked levels', (tester) async {
     await tester.pumpWidget(app(ChaptersScreen(player: PlayerState())));
     expect(find.text('Chapter 1  •  Whispering Forest'), findsOneWidget);
     expect(find.text('Current'), findsOneWidget);
-    expect(find.text('Coming soon'), findsWidgets);
+    expect(find.text('Locked'), findsWidgets);
     final scrollable = find.byType(Scrollable).first;
     await tester.drag(scrollable, const Offset(0, -1800));
     await tester.pumpAndSettle();
@@ -30,13 +31,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('mission tabs show honest placeholders, not fake claims', (tester) async {
-    await tester.pumpWidget(app(const MissionsScreen()));
+  testWidgets('mission tabs show actual progress', (tester) async {
+    final stats = StatsState();
+    await tester.pumpWidget(app(MissionsScreen(player: PlayerState(), stats: stats)));
     expect(find.text('Find 10 bonus words'), findsOneWidget);
-    expect(find.textContaining('Claim'), findsNothing);
+    expect(find.text('0 / 10'), findsOneWidget);
     await tester.tap(find.text('Achievements'));
     await tester.pump();
-    expect(find.text('Lexicon Scholar'), findsOneWidget);
+    expect(find.text('Lexicon Scholar 1'), findsOneWidget);
     expect(find.textContaining('Claim'), findsNothing);
     expect(tester.takeException(), isNull);
   });

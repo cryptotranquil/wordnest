@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/ad_service.dart';
 
 class PlayerState extends ChangeNotifier {
+  static const String _snapshotKey = 'player_snapshot_v2';
   static const String _coinsKey = 'coins';
   static const String _hintsKey = 'hints';
   static const String _targetsKey = 'targets';
@@ -25,6 +28,11 @@ class PlayerState extends ChangeNotifier {
   int _currentChapter = 1;
   bool _tutorialSeen = false;
   bool _removeAdsOwned = false;
+  bool _finishedJourney = false;
+  String _missionDay = '';
+  Set<String> _dailyClaims = {};
+  Map<String, int> _achievementClaims = {};
+  Future<void> _pendingSave = Future.value();
 
   int get coins => _coins;
   int get hints => _hints;
@@ -39,6 +47,7 @@ class PlayerState extends ChangeNotifier {
   int get currentChapter => _currentChapter;
   bool get tutorialSeen => _tutorialSeen;
   bool get removeAdsOwned => _removeAdsOwned;
+  bool get finishedJourney => _finishedJourney;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -52,24 +61,71 @@ class PlayerState extends ChangeNotifier {
     _currentChapter = prefs.getInt(_currentChapterKey) ?? 1;
     _tutorialSeen = prefs.getBool(_tutorialSeenKey) ?? false;
     _removeAdsOwned = prefs.getBool(_removeAdsKey) ?? false;
+    final snapshot = prefs.getString(_snapshotKey);
+    if (snapshot != null) {
+      final data = jsonDecode(snapshot) as Map<String, dynamic>;
+      _coins = data['coins'] as int? ?? _coins;
+      _hints = data['hints'] as int? ?? _hints;
+      _targets = data['targets'] as int? ?? _targets;
+      _currentLevel = data['currentLevel'] as int? ?? _currentLevel;
+      _claimedDay = data['claimedDay'] as int? ?? _claimedDay;
+      _claimedCycle = data['claimedCycle'] as int? ?? _claimedCycle;
+      _lastClaimDate = data['lastClaimDate'] as String?;
+      _currentChapter = data['currentChapter'] as int? ?? _currentChapter;
+      _tutorialSeen = data['tutorialSeen'] as bool? ?? _tutorialSeen;
+      _removeAdsOwned = data['removeAdsOwned'] as bool? ?? _removeAdsOwned;
+      _finishedJourney = data['finishedJourney'] as bool? ?? false;
+      _missionDay = data['missionDay'] as String? ?? '';
+      _dailyClaims = Set<String>.from(data['dailyClaims'] as List? ?? []);
+      _achievementClaims = Map<String, int>.from(data['achievementClaims'] as Map? ?? {});
+    }
     AdService().setRemoveAdsOwned(_removeAdsOwned);
     notifyListeners();
   }
 
-  Future<void> save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_coinsKey, _coins);
-    await prefs.setInt(_hintsKey, _hints);
-    await prefs.setInt(_targetsKey, _targets);
-    await prefs.setInt(_currentLevelKey, _currentLevel);
-    await prefs.setInt(_claimedDayKey, _claimedDay);
-    await prefs.setInt(_claimedCycleKey, _claimedCycle);
-    if (_lastClaimDate != null) {
-      await prefs.setString(_lastClaimDateKey, _lastClaimDate!);
+  /// One snapshot stores both the balance and claim receipts. Writes are
+  /// serialized so a slower earlier save cannot overwrite a newer one.
+  Future<void> save() {
+    final snapshot = jsonEncode({
+      'coins': _coins, 'hints': _hints, 'targets': _targets,
+      'currentLevel': _currentLevel, 'claimedDay': _claimedDay,
+      'claimedCycle': _claimedCycle, 'lastClaimDate': _lastClaimDate,
+      'currentChapter': _currentChapter, 'tutorialSeen': _tutorialSeen,
+      'removeAdsOwned': _removeAdsOwned, 'finishedJourney': _finishedJourney, 'missionDay': _missionDay,
+      'dailyClaims': _dailyClaims.toList(), 'achievementClaims': _achievementClaims,
+    });
+    _pendingSave = _pendingSave.catchError((Object _) {}).then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_snapshotKey, snapshot);
+    });
+    return _pendingSave;
+  }
+
+  bool dailyClaimed(String day, String id) =>
+      day == _missionDay && _dailyClaims.contains(id);
+  int achievementTierClaimed(String id) => _achievementClaims[id] ?? 0;
+
+  bool claimDailyMission(String day, String id, int coins) {
+    // A clock moving backwards must not reopen an earlier reward day.
+    if (day.compareTo(_missionDay) < 0) return false;
+    if (day != _missionDay) {
+      _missionDay = day;
+      _dailyClaims = {};
     }
-    await prefs.setInt(_currentChapterKey, _currentChapter);
-    await prefs.setBool(_tutorialSeenKey, _tutorialSeen);
-    await prefs.setBool(_removeAdsKey, _removeAdsOwned);
+    if (!_dailyClaims.add(id)) return false;
+    _coins += coins;
+    save();
+    notifyListeners();
+    return true;
+  }
+
+  bool claimAchievement(String id, int tier, int coins) {
+    if (tier != achievementTierClaimed(id) + 1) return false;
+    _achievementClaims[id] = tier;
+    _coins += coins;
+    save();
+    notifyListeners();
+    return true;
   }
 
   void setCurrentChapter(int chapter) {
@@ -80,9 +136,14 @@ class PlayerState extends ChangeNotifier {
 
   void setCurrentLevel(int level) {
     _currentLevel = level;
-    if (_currentChapter < 1) {
-      _currentChapter = 1;
-    }
+    _currentChapter = ((level - 1) ~/ 20) + 1;
+    save();
+    notifyListeners();
+  }
+
+  void markJourneyFinished() {
+    if (_finishedJourney) return;
+    _finishedJourney = true;
     save();
     notifyListeners();
   }

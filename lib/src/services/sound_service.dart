@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
+import '../state/settings_state.dart';
 import 'package:flutter/foundation.dart';
 
 /// Sound effects service for WordNest.
@@ -26,9 +29,33 @@ class SoundService {
 
   bool _soundOn = true;
   bool _disposed = false;
+  bool _listening = false;
+  bool _settingsSoundOn = true;
+
+  void _onSettingsChanged() {
+    final enabled = SettingsState.instance.soundOn;
+    final justMuted = _settingsSoundOn && !enabled;
+    _settingsSoundOn = enabled;
+    if (!justMuted || _disposed) return;
+    for (final player in <AudioPlayer>[
+      _uiTapPlayer, _togglePlayer, _letterPlayer, _wordCorrectPlayer,
+      _wordBonusPlayer, _wordWrongPlayer, _wordRepeatPlayer, _shufflePlayer,
+      _hintPlayer, _targetPlayer, _coinPlayer, _levelCompletePlayer,
+      _rewardClaimPlayer, _chapterUnlockPlayer, _missionClaimPlayer,
+    ]) {
+      unawaited(player.stop().catchError((Object error) {
+        if (kDebugMode) debugPrint('Could not stop sound: $error');
+      }));
+    }
+  }
 
   /// Initialize the service. Call this before playing sounds.
   Future<void> init() async {
+    if (!_listening) {
+      _settingsSoundOn = SettingsState.instance.soundOn;
+      SettingsState.instance.addListener(_onSettingsChanged);
+      _listening = true;
+    }
     // Set release mode to stop after each sound
     await _uiTapPlayer.setReleaseMode(ReleaseMode.stop);
     await _togglePlayer.setReleaseMode(ReleaseMode.stop);
@@ -55,7 +82,7 @@ class SoundService {
 
   /// Play a sound effect.
   void play(SoundId id) {
-    if (!_soundOn || _disposed) return;
+    if (!_soundOn || !SettingsState.instance.soundOn || _disposed) return;
     _playOnPlayer(_getPlayerForSound(id), _soundNameFor(id));
   }
 
@@ -63,7 +90,7 @@ class SoundService {
     switch (id) {
       case SoundId.uiTap: return 'ui_tap';
       case SoundId.toggle: return 'toggle';
-      case SoundId.letter: return 'letter';
+      case SoundId.letter: return 'letter_1';
       case SoundId.wordCorrect: return 'word_correct';
       case SoundId.wordBonus: return 'word_bonus';
       case SoundId.wordWrong: return 'word_wrong';
@@ -81,20 +108,15 @@ class SoundService {
 
   /// Play a letter sound based on position in swipe (1-7).
   void playLetter(int positionInSwipe) {
-    if (!_soundOn || _disposed) return;
+    if (!_soundOn || !SettingsState.instance.soundOn || _disposed) return;
     final clampedPos = positionInSwipe.clamp(1, 7);
     _playOnPlayer(_letterPlayer, 'letter_$clampedPos');
   }
 
   void _playOnPlayer(AudioPlayer player, String soundName) {
-    try {
-      player.play(AssetSource('audio/sfx/$soundName.mp3'));
-    } catch (e) {
-      // Silently ignore errors (e.g., missing assets in tests)
-      if (kDebugMode) {
-        // In debug mode, we could log, but the prompt says never throw
-      }
-    }
+    unawaited(player.play(AssetSource('audio/sfx/$soundName.mp3')).catchError((Object error) {
+      if (kDebugMode) debugPrint('Sound playback failed: $error');
+    }));
   }
 
   AudioPlayer _getPlayerForSound(SoundId id) {
@@ -133,6 +155,7 @@ class SoundService {
   }
 
   void dispose() {
+    if (_listening) SettingsState.instance.removeListener(_onSettingsChanged);
     _disposed = true;
     _uiTapPlayer.dispose();
     _togglePlayer.dispose();

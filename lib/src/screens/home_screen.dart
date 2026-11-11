@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../data/levels.dart';
+import '../data/chapter.dart';
+import '../data/missions.dart';
+import '../state/stats_state.dart';
+import 'shop_screen.dart';
 import '../state/daily_reward_service.dart';
 import '../state/player_state.dart';
 import '../theme/wordnest_theme.dart';
@@ -15,13 +19,10 @@ import 'gameplay_screen.dart';
 
 /// Home: brand, the current chapter's play disc and one Today panel.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.player});
+  const HomeScreen({super.key, required this.player, this.onMissions});
 
   final PlayerState player;
-
-  static const int chapterTotalLevels = 8;
-
-  int get _cleared => (player.currentLevel - 8).clamp(0, chapterTotalLevels);
+  final VoidCallback? onMissions;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -120,11 +121,26 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          const ScenicBackground(scrim: SceneScrim.home),
+          AnimatedBuilder(
+            animation: widget.player,
+            builder: (context, _) {
+              final chapter = ChapterBook.chapterForLevel(widget.player.currentLevel);
+              final palette = switch (chapter?.themeKey) {
+                'ocean' => ScenePalette.dusk,
+                'cosmos' => ScenePalette.night,
+                _ => ScenePalette.dawn,
+              };
+              return ScenicBackground(palette: palette, scrim: SceneScrim.home);
+            },
+          ),
           SafeArea(
             child: AnimatedBuilder(
-              animation: widget.player,
+              animation: Listenable.merge([widget.player, StatsState.instance]),
               builder: (BuildContext context, _) {
+                final chapter = ChapterBook.chapterForLevel(widget.player.currentLevel) ?? ChapterBook.chapters.first;
+                final chapterTotal = chapter.levelEnd - chapter.levelStart + 1;
+                final cleared = widget.player.finishedJourney ? chapterTotal : (widget.player.currentLevel - chapter.levelStart).clamp(0, chapterTotal);
+                final completedMissions = MissionBook.dailyMissions.where((m) => StatsState.instance.dailyProgress(m.id) >= m.target).length;
                 return Column(
                   children: <Widget>[
                     Padding(
@@ -135,9 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const Wordmark(),
                           CoinPill(
                             coins: widget.player.coins,
-                            onAdd: () => _notify(
-                              'The coin shop is not designed yet.',
-                            ),
+                            onAdd: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ShopScreen(player: widget.player))),
                           ),
                         ],
                       ),
@@ -156,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Chapter 2',
+                                'Chapter ${chapter.id}',
                                 style: AppText.label(
                                   12,
                                   weight: 600,
@@ -166,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                'Misty Lake',
+                                chapter.name,
                                 style: AppText.label(12, weight: 700),
                               ),
                             ],
@@ -197,18 +211,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(width: 10),
                               Row(
                                 children: <Widget>[
-                                  for (var i = 0; i < 3; i++)
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 3),
-                                      child: Icon(
-                                        Icons.star_rounded,
-                                        size: 14,
-                                        color: i < 2
-                                            ? AppColors.gold
-                                            : Colors.white.withValues(alpha: 0.22),
-                                      ),
-                                    ),
-                                  const SizedBox(width: 10),
                                   Text(
                                     _formatTimeUntilReset(),
                                     style: AppText.label(11, weight: 500, color: AppColors.muted),
@@ -237,11 +239,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       TextSpan(
                                         children: <InlineSpan>[
                                           TextSpan(
-                                            text: '${widget._cleared}',
+                                            text: '$cleared',
                                             style: AppText.label(10.5, weight: 700),
                                           ),
                                           TextSpan(
-                                            text: ' of ${HomeScreen.chapterTotalLevels}',
+                                            text: ' of $chapterTotal',
                                             style: AppText.label(
                                               10.5,
                                               weight: 600,
@@ -267,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         FractionallySizedBox(
                                           alignment: Alignment.centerLeft,
-                                          widthFactor: widget._cleared / HomeScreen.chapterTotalLevels,
+                                          widthFactor: cleared / chapterTotal,
                                           child: Container(
                                             decoration: const BoxDecoration(
                                               gradient: LinearGradient(
@@ -297,10 +299,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         rows: <Widget>[
                           TodayRow(
                             icon: Icons.calendar_today_rounded,
-                            title: 'Daily puzzle',
-                            detail: 'Pine Vista #42',
+                            title: 'Current puzzle',
+                            detail: 'Level ${widget.player.currentLevel}',
                             actionLabel: 'Play',
-                            onAction: () => _openLevel(1),
+                            onAction: () => _openLevel(widget.player.currentLevel),
                             showDivider: false,
                           ),
                           _DailyRewardRow(
@@ -311,11 +313,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           TodayRow(
                             icon: Icons.workspace_premium_rounded,
                             title: 'Missions',
-                            detail: '2 of 3 complete',
+                            detail: '$completedMissions of ${MissionBook.dailyMissions.length} complete',
                             actionLabel: 'View',
-                            onAction: () => _notify(
-                              'Missions are not designed yet.',
-                            ),
+                            onAction: widget.onMissions ?? () => _notify('Open Missions from the navigation bar.'),
                           ),
                         ],
                       ),

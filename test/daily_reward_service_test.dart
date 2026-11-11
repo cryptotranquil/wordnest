@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:wordnest/src/data/daily_rewards.dart';
 import 'package:wordnest/src/state/daily_reward_service.dart';
 import 'package:wordnest/src/state/player_state.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   group('DailyRewardService', () {
     /// Create a service with a fixed now function.
     DailyRewardService makeService(DateTime fixedNow, {PlayerState? player}) {

@@ -56,6 +56,6 @@ class ChapterBook {
 
   static bool isChapterUnlocked(int chapterId, int currentLevel) {
     final chapter = chapters.firstWhere((c) => c.id == chapterId);
-    return currentLevel >= chapter.unlockAfterLevel;
+    return currentLevel > chapter.unlockAfterLevel;
   }
 }
