@@ -128,7 +128,10 @@ class _GameplayScreenState extends State<GameplayScreen> {
     _sheetShown = true;
     _game.awardCompletion();
     final next = LevelBook.nextLevelAfter(widget.level.number);
-    if (next != null) widget.player.setCurrentLevel(next);
+    // Replaying an earlier puzzle must not send the player backwards.
+    if (next != null && widget.level.number == widget.player.currentLevel) {
+      widget.player.setCurrentLevel(next);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _openCompleteSheet());
   }
 
