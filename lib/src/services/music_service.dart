@@ -6,23 +6,60 @@ import 'package:flutter/widgets.dart';
 
 import '../state/settings_state.dart';
 
-/// Serializes music changes so rapid chapter/settings changes cannot leave two
-/// tracks playing. Asset paths are relative to Flutter's assets/ directory.
-class MusicService {
-  MusicService._();
-  static final MusicService instance = MusicService._();
+/// The small playback interface also lets tests exercise startup without a
+/// platform audio plugin or a browser.
+abstract class MusicPlayback {
+  Future<void> setLoop();
+  Future<void> setVolume(double volume);
+  Future<void> playAsset(String path);
+  Future<void> pause();
+  Future<void> resume();
+  Future<void> stop();
+  Future<void> dispose();
+}
+
+class _AudioPlayerPlayback implements MusicPlayback {
   final AudioPlayer _player = AudioPlayer();
+
+  @override
+  Future<void> setLoop() => _player.setReleaseMode(ReleaseMode.loop);
+  @override
+  Future<void> setVolume(double volume) => _player.setVolume(volume);
+  @override
+  Future<void> playAsset(String path) => _player.play(AssetSource(path));
+  @override
+  Future<void> pause() => _player.pause();
+  @override
+  Future<void> resume() => _player.resume();
+  @override
+  Future<void> stop() => _player.stop();
+  @override
+  Future<void> dispose() => _player.dispose();
+}
+
+/// Serializes music changes so rapid chapter/settings changes cannot leave two
+/// tracks playing. Browsers must receive a user gesture before any play call.
+class MusicService {
+  MusicService._() : _playback = _AudioPlayerPlayback(), _hasGesture = !kIsWeb;
+
+  @visibleForTesting
+  MusicService.forTesting({required MusicPlayback playback, required bool requiresGesture})
+      : _playback = playback, _hasGesture = !requiresGesture;
+
+  static final MusicService instance = MusicService._();
+  final MusicPlayback _playback;
   Future<void> _queue = Future.value();
   bool _initialized = false;
   bool _foreground = true;
   bool _playing = false;
+  bool _hasGesture;
   int? _wantedChapter;
   int? _loadedChapter;
 
   Future<void> init() async {
     if (_initialized) return;
     try {
-      await _player.setReleaseMode(ReleaseMode.loop);
+      await _playback.setLoop();
       _initialized = true;
       SettingsState.instance.addListener(_onSettingsChanged);
       await _schedule();
@@ -33,11 +70,15 @@ class MusicService {
 
   void _onSettingsChanged() { _schedule(); }
 
-  /// Web browsers may reject autoplay until a gesture. Retry on interaction.
-  void onUserInteraction() {
+  /// Record gestures even during startup; the requested chapter may arrive
+  /// later. Without this gate Chrome can leave its resume future pending,
+  /// blocking both the splash screen and every subsequently queued retry.
+  Future<void> onUserInteraction() {
+    _hasGesture = true;
     if (_initialized && !_playing && _foreground && SettingsState.instance.musicOn) {
-      _schedule();
+      return _schedule();
     }
+    return Future.value();
   }
 
   Future<void> playForChapter(int chapterIndex) {
@@ -54,18 +95,20 @@ class MusicService {
         final settings = SettingsState.instance;
         final chapter = _wantedChapter;
         if (!_foreground || !settings.musicOn || chapter == null) {
-          if (_playing) await _player.pause();
+          if (_playing) await _playback.pause();
           _playing = false;
           return;
         }
-        await _player.setVolume(settings.musicVolume * .8);
+        // Do not create a source or call play/resume on web before a gesture.
+        if (!_hasGesture) return;
+        await _playback.setVolume(settings.musicVolume * .8);
         if (_loadedChapter != chapter) {
-          await _player.stop();
-          await _player.play(AssetSource('audio/music/${['chapter_forest', 'chapter_ocean', 'chapter_cosmos'][chapter]}.mp3'));
+          await _playback.stop();
+          await _playback.playAsset('audio/music/${['chapter_forest', 'chapter_ocean', 'chapter_cosmos'][chapter]}.mp3');
           _loadedChapter = chapter;
           _playing = true;
         } else if (!_playing) {
-          await _player.resume();
+          await _playback.resume();
           _playing = true;
         }
       } catch (error) {
@@ -90,6 +133,6 @@ class MusicService {
   void dispose() {
     SettingsState.instance.removeListener(_onSettingsChanged);
     _initialized = false;
-    unawaited(_player.dispose());
+    unawaited(_playback.dispose());
   }
 }
