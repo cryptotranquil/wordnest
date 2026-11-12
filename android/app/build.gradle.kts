@@ -6,10 +6,12 @@ plugins {
 
 android {
     namespace = "com.example.wordnest"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_local_notifications requires API 37 or newer.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -46,4 +48,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// Required by flutter_local_notifications for Java time APIs on older Android.
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
