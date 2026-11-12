@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'data/chapter.dart';
 import 'screens/splash_screen.dart';
@@ -23,6 +24,7 @@ class _WordnestAppState extends State<WordnestApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
     _ready = _initialize();
   }
 
@@ -42,6 +44,11 @@ class _WordnestAppState extends State<WordnestApp> with WidgetsBindingObserver {
     }
   }
 
+  bool _onKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) MusicService.instance.onUserInteraction();
+    return false; // Do not consume keyboard navigation or shortcuts.
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     MusicService.instance.handleAppLifecycleStateChanged(state);
@@ -51,6 +58,7 @@ class _WordnestAppState extends State<WordnestApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     _player.dispose();
     super.dispose();
   }
