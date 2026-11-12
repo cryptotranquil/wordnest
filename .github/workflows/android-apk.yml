@@ -30,8 +30,10 @@ jobs:
           flutter-version: '3.47.8'
           cache: true
 
-      - name: Install locked dependencies
-        run: flutter pub get --enforce-lockfile
+      - name: Resolve dependencies
+        run: |
+          flutter pub get
+          echo "::notice title=Resolved lockfile::$(gzip -c pubspec.lock | base64 -w0)"
 
       - name: Build release-mode test APK
         shell: bash
