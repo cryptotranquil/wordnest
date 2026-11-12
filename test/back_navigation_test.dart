@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wordnest/src/screens/app_shell.dart';
 import 'package:wordnest/src/state/player_state.dart';
 import 'package:wordnest/src/state/settings_state.dart';
+import 'package:wordnest/src/state/stats_state.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -11,6 +12,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await SettingsState.instance.load();
+    await StatsState.instance.load();
     SettingsState.instance.setSoundOn(false);
   });
 
@@ -55,9 +57,11 @@ void main() {
     await tapTab(tester, 3);
     key.currentState!.push(MaterialPageRoute<void>(builder: (_) =>
       const Scaffold(body: Text('A pushed screen'))));
+    await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('A pushed screen'), findsOneWidget);
     await tester.binding.handlePopRoute();
+    await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('A pushed screen'), findsNothing);
     expect(selectedTab(tester), 3);
