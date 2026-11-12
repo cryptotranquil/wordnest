@@ -18,6 +18,7 @@ import '../widgets/capsules.dart';
 import '../widgets/controls.dart';
 import '../widgets/letter_wheel.dart';
 import '../widgets/scenic_background.dart';
+import '../widgets/rewarded_offers.dart';
 import 'level_complete_sheet.dart';
 import 'shop_screen.dart';
 import 'tutorial_overlay.dart';
@@ -225,18 +226,45 @@ class _GameplayScreenState extends State<GameplayScreen> with WidgetsBindingObse
 
   void _hint() {
     if (_game.isComplete) return;
-    final ok = _game.revealWithHint();
-    if (!ok) {
-      _toast('Hints cost ${GameController.hintCost} coins.');
+    if (!_game.revealWithHint()) {
+      if (widget.player.hintTokens == 0 && widget.player.coins < GameController.hintCost) {
+        _showEarnRewards();
+      } else {
+        _toast('There are no unrevealed hint cells available.');
+      }
     }
   }
 
   void _target() {
     if (_game.isComplete) return;
-    final ok = _game.highlightWithTarget();
-    if (!ok) {
-      _toast('Target costs ${GameController.targetCost} coins.');
+    if (!_game.highlightWithTarget()) {
+      if (widget.player.targetTokens == 0 && widget.player.coins < GameController.targetCost) {
+        _showEarnRewards();
+      } else {
+        _toast('No target is available.');
+      }
     }
+  }
+
+  void _showEarnRewards() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0C2223),
+      builder: (context) => SafeArea(child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('Need a little help?', style: AppText.quicksand(22, weight: 700)),
+          const SizedBox(height: 8),
+          Text('You can earn hints or coins by watching an optional ad.',
+            style: AppText.label(12, color: AppColors.muted)),
+          const SizedBox(height: 20),
+          RewardedOffers(player: widget.player),
+          const SizedBox(height: 16),
+          Center(child: TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Back to puzzle'))),
+        ]),
+      )),
+    );
   }
 
   void _toast(String message) {

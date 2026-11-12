@@ -1,59 +1,71 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:wordnest/src/config/ad_config.dart';
 
-class AdService {
+/// Result of one opted-in rewarded ad. Rewards are delivered separately, only
+/// from the SDK's onUserEarnedReward callback.
+enum RewardedAdResult { rewarded, dismissed, unavailable, unsupported, busy, failed }
+
+abstract class RewardedAdGateway {
+  bool get isSupported;
+  Future<RewardedAdResult> showRewardedAd({required VoidCallback onReward, bool Function()? canShow});
+}
+
+/// Small interfaces keep the ad lifecycle testable without the native SDK.
+abstract class RewardedAdBackend {
+  bool get isSupported;
+  Future<RewardedAdHandle?> load();
+}
+
+abstract class RewardedAdHandle {
+  Future<RewardedAdResult> show({required VoidCallback onReward});
+  Future<void> dispose();
+}
+
+class AdService implements RewardedAdGateway {
   static final AdService _instance = AdService._internal();
   factory AdService() => _instance;
-  AdService._internal();
+  AdService._internal() : _rewardedBackend = _MobileRewardedAdBackend();
 
-  RewardedAd? _rewardedAd;
+  @visibleForTesting
+  AdService.withRewardedBackend(RewardedAdBackend backend) : _rewardedBackend = backend;
+
+  final RewardedAdBackend _rewardedBackend;
+  bool _rewardedBusy = false;
   InterstitialAd? _interstitialAd;
   int _levelsCleared = 0;
   DateTime? _lastInterstitialTime;
   bool _removeAdsOwned = false;
 
-  Future<void> initialize() async {
-    await MobileAds.instance.initialize();
-  }
+  @override
+  bool get isSupported => _rewardedBackend.isSupported;
 
-  Future<void> preloadRewardedAd() async {
+  @override
+  Future<RewardedAdResult> showRewardedAd({required VoidCallback onReward, bool Function()? canShow}) async {
+    if (!isSupported) return RewardedAdResult.unsupported;
+    if (_rewardedBusy) return RewardedAdResult.busy;
+    _rewardedBusy = true;
+    var credited = false;
     try {
-      await RewardedAd.load(
-        adUnitId: AdConfig.rewardedAdUnitId,
-        request: const AdRequest(),
-        rewardedAdLoadCallback: RewardedAdLoadCallback(
-          onAdLoaded: (ad) {
-            _rewardedAd = ad;
-          },
-          onAdFailedToLoad: (error) {
-            _rewardedAd = null;
-          },
-        ),
-      );
-    } catch (e) {
-      _rewardedAd = null;
+      final ad = await _rewardedBackend.load();
+      if (ad == null) return RewardedAdResult.unavailable;
+      if (canShow != null && !canShow()) {
+        await ad.dispose();
+        return RewardedAdResult.dismissed;
+      }
+      return await ad.show(onReward: () {
+        if (credited) return;
+        credited = true;
+        onReward();
+      });
+    } catch (error) {
+      debugPrint('Rewarded ad failed: $error');
+      return RewardedAdResult.failed;
+    } finally {
+      _rewardedBusy = false;
     }
-  }
-
-  Future<void> showRewardedAd({Function? onReward}) async {
-    if (_rewardedAd == null) {
-      await preloadRewardedAd();
-      if (_rewardedAd == null) return;
-    }
-
-    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _rewardedAd = null;
-        preloadRewardedAd();
-      },
-    );
-
-    await _rewardedAd!.show(
-      onUserEarnedReward: (ad, reward) {
-        onReward?.call();
-      },
-    );
   }
 
   Future<void> preloadInterstitialAd() async {
@@ -110,5 +122,120 @@ class AdService {
 
   void setRemoveAdsOwned(bool owned) {
     _removeAdsOwned = owned;
+  }
+}
+/// AdMob rewarded ads are supported by this plugin only on Android and iOS.
+class _MobileRewardedAdBackend implements RewardedAdBackend {
+  Future<void>? _initialization;
+
+  @override
+  bool get isSupported => !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+
+  Future<void> _initialize() async {
+    try {
+      _initialization ??= MobileAds.instance.initialize().then<void>((_) {});
+      await _initialization!.timeout(const Duration(seconds: 15));
+    } catch (_) {
+      _initialization = null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<RewardedAdHandle?> load() async {
+    await _initialize();
+    final loaded = Completer<RewardedAd?>();
+    final id = defaultTargetPlatform == TargetPlatform.iOS
+        ? AdConfig.iosRewardedAdUnitId : AdConfig.androidRewardedAdUnitId;
+
+    Future<void> requestAd() async {
+      try {
+        await RewardedAd.load(
+          adUnitId: id,
+          request: const AdRequest(),
+          rewardedAdLoadCallback: RewardedAdLoadCallback(
+            onAdLoaded: (ad) {
+              // A delayed callback after a timeout must not leak a native ad.
+              if (loaded.isCompleted) {
+                ad.dispose();
+              } else {
+                loaded.complete(ad);
+              }
+            },
+            onAdFailedToLoad: (error) {
+              debugPrint('Rewarded ad unavailable: $error');
+              if (!loaded.isCompleted) loaded.complete(null);
+            },
+          ),
+        );
+      } catch (error) {
+        debugPrint('Rewarded ad request failed: $error');
+        if (!loaded.isCompleted) loaded.complete(null);
+      }
+    }
+
+    unawaited(requestAd());
+    final ad = await loaded.future.timeout(const Duration(seconds: 20), onTimeout: () {
+      if (!loaded.isCompleted) loaded.complete(null);
+      return null;
+    });
+    return ad == null ? null : _MobileRewardedAdHandle(ad);
+  }
+}
+
+class _MobileRewardedAdHandle implements RewardedAdHandle {
+  _MobileRewardedAdHandle(this.ad);
+  final RewardedAd ad;
+
+  @override
+  Future<void> dispose() => ad.dispose();
+
+  @override
+  Future<RewardedAdResult> show({required VoidCallback onReward}) async {
+    final completed = Completer<RewardedAdResult>();
+    var earned = false;
+    var dismissed = false;
+    var disposed = false;
+    Timer? dismissalTimer;
+
+    void finish(RewardedAdResult result) {
+      dismissalTimer?.cancel();
+      if (!disposed) {
+        disposed = true;
+        ad.dispose();
+      }
+      if (!completed.isCompleted) completed.complete(result);
+    }
+
+    ad.fullScreenContentCallback = FullScreenContentCallback<RewardedAd>(
+      onAdDismissedFullScreenContent: (_) {
+        dismissed = true;
+        if (earned) {
+          finish(RewardedAdResult.rewarded);
+        } else {
+          // Some ad networks deliver the earned callback just after dismissal.
+          dismissalTimer = Timer(const Duration(seconds: 2), () => finish(
+            earned ? RewardedAdResult.rewarded : RewardedAdResult.dismissed,
+          ));
+        }
+      },
+      onAdFailedToShowFullScreenContent: (_, error) {
+        debugPrint('Rewarded ad could not be shown: $error');
+        finish(RewardedAdResult.failed);
+      },
+    );
+    try {
+      await ad.show(onUserEarnedReward: (_, reward) {
+        if (earned) return;
+        earned = true;
+        onReward();
+        if (dismissed) finish(RewardedAdResult.rewarded);
+      });
+    } catch (error) {
+      debugPrint('Rewarded ad could not be shown: $error');
+      finish(RewardedAdResult.failed);
+    }
+    return completed.future;
   }
 }

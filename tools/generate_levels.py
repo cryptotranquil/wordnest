@@ -1,21 +1,13 @@
 #!/usr/bin/env python3
-"""WordNest level generator.
+"""Generate dictionary-checked, unique WordNest crossword levels.
 
-Generates crossword levels (letter wheel + crossword + bonus words) as JSON.
-Every level is checked with the same rules as test/level_validation_test.dart.
+Examples:
+  python tools/generate_levels.py --count 60 --common --min-zipf 4.5 --replace
+  python tools/generate_levels.py --append --count 20 --common --min-zipf 4.5
+  python tools/generate_levels.py --validate assets/levels/levels.json
 
-Examples
---------
-  # real dictionary (one word per line, e.g. the ENABLE list) + only common words
-  pip install wordfreq
-  python tools/generate_levels.py --count 500 --dictionary enable1.txt --common \
-      --out assets/levels/levels.json
-
-  # a plain word list you trust
-  python tools/generate_levels.py --count 200 --wordlist my_words.txt
-
-  # re-check an existing file
-  python tools/generate_levels.py --validate assets/levels/levels.json --wordlist my_words.txt
+The bundled ENABLE subset is the default dictionary. A custom --wordlist only
+narrows that dictionary; it cannot introduce words not in it.
 """
 import argparse
 import json
@@ -43,54 +35,53 @@ THEME_WORDS = {
 
 # Minimal safety list. EXTEND THIS for production (or use a curated dictionary).
 BLOCKLIST = set("""ASS ARSE DAMN HELL SEX SEXY PORN NUDE NAZI RAPE RAPED RAPES KILL KILLS KILLER DEAD DIE DIES GOD
+SHIT SHITS SHITTED FUCK FUCKS FUCKED FUCKER FUCKERS FUCKING BITCH BITCHES BASTARD BASTARDS
+DICK DICKS COCK COCKS CUNT CUNTS PISS PISSED PISSES CRAP CRAPS SLUT SLUTS WHORE WHORES
+RACISM RACIST RACISTS SLAVE SLAVES SLAVERY GUN GUNS MURDER MURDERS SUICIDE SUICIDES
+DEATH DEATHS WAR WARS THREAT THREATS
 """.split())
 
 
 # --------------------------------------------------------------------------- words
-def load_words(args):
-    """Returns (words:set[str], freq:dict[str,float])."""
-    words = set()
-    freq = {}
-
-    def read_file(path):
-        out = set()
+def read_word_list(path):
+    """Read one ASCII English word per line, normalized to uppercase."""
+    out = set()
+    try:
         with open(path, encoding="utf8") as fh:
             for line in fh:
-                w = line.strip().split()[0].upper() if line.strip() else ""
-                if w.isalpha() and w.isascii():
-                    out.add(w)
-        return out
+                word = line.strip().upper()
+                if word.isalpha() and word.isascii():
+                    out.add(word)
+    except OSError as exc:
+        sys.exit(f"Cannot read word list {path}: {exc}")
+    if not out:
+        sys.exit(f"Word list is empty: {path}")
+    return out
 
-    dictionary = read_file(args.dictionary) if args.dictionary else None
-    plain = read_file(args.wordlist) if args.wordlist else None
-    wf = None
+
+def load_words(args):
+    """Return eligible generation words, frequencies, and the dictionary.
+
+    A curated word list and frequency filtering can only narrow the dictionary;
+    neither can add words that are absent from it.
+    """
+    dictionary = read_word_list(args.dictionary)
+    words = set(dictionary)
+    if args.wordlist:
+        words &= read_word_list(args.wordlist)
+    words = {w for w in words if MIN_LEN <= len(w) <= args.max_wheel
+             and w not in BLOCKLIST and len(set(w)) > 1}
+    freq = {}
     if args.common:
         try:
             import wordfreq  # type: ignore
-            wf = wordfreq
         except ImportError:
-            sys.exit("--common needs the wordfreq package: pip install wordfreq")
-
-    if plain is not None:
-        words = plain
-    elif dictionary is not None:
-        words = dictionary
-    elif wf is not None:
-        words = {w.upper() for w in wf.top_n_list("en", 80000) if w.isalpha() and w.isascii()}
-    else:
-        sys.exit("Give me words: --wordlist FILE, or --dictionary FILE [--common].")
-
-    if wf is not None:
-        for w in list(words):
-            z = wf.zipf_frequency(w.lower(), "en")
-            freq[w] = z
-        if args.common:
-            words = {w for w in words if freq.get(w, 0) >= args.min_zipf}
-        if dictionary is not None and plain is None:
-            words &= dictionary
-    words = {w for w in words if MIN_LEN <= len(w) <= args.max_wheel and w not in BLOCKLIST
-             and len(set(w)) > 1}
-    return words, freq
+            sys.exit("--common needs the wordfreq package: pip install wordfreq==3.1.1")
+        freq = {w: wordfreq.zipf_frequency(w.lower(), "en") for w in words}
+        words = {w for w in words if freq[w] >= args.min_zipf}
+    if not words:
+        sys.exit("No eligible dictionary words remain after filtering")
+    return words, freq, dictionary
 
 
 def sig(word):
@@ -280,18 +271,18 @@ def theme_score(subs, theme_key):
     return sum(1 for w in tw if w in subs)
 
 
-def make_level(n, args, by_sig, roots_by_size, used_roots, rng):
+def make_level(n, args, by_sig, roots_by_size, used_wheels, used_grids, rng):
     ch, size, target = plan(n, args.max_wheel)
     theme = THEME_KEYS[ch % len(THEME_KEYS)]
     pool = roots_by_size.get(size, [])
     if not pool:
         return None
-    candidates = [r for r in pool if r not in used_roots] or pool
+    candidates = [r for r in pool if sig(r) not in used_wheels]
     rng.shuffle(candidates)
     # try a sample, preferring themed roots
     sample = candidates[:60]
     sample.sort(key=lambda r: -theme_score(subwords_of(r, by_sig), theme))
-    for root in sample:
+    for root in sample + candidates[60:]:
         subs = subwords_of(root, by_sig)
         cand = sorted(subs)
         if len(cand) < target:
@@ -302,6 +293,9 @@ def make_level(n, args, by_sig, roots_by_size, used_roots, rng):
         r0, c0, _, _ = g.bbox()
         r1, c1 = g.bbox()[2], g.bbox()[3]
         grid_words = [w for w, *_ in g.words]
+        grid_signature = tuple(sorted(grid_words))
+        if grid_signature in used_grids:
+            continue
         letters = list(root)
         rng.shuffle(letters)
         bonus = [w for w in subs if w not in grid_words]
@@ -319,51 +313,119 @@ def make_level(n, args, by_sig, roots_by_size, used_roots, rng):
         }
         if validate_level(level, args._wordset):
             continue
-        used_roots.add(root)
+        used_wheels.add(sig(root))
+        used_grids.add(grid_signature)
         return level
     return None
 
 
+DEFAULT_DICTIONARY = Path(__file__).resolve().parent / "dictionaries" / "enable1_3to7.txt"
+
+
+def validate_collection(levels, dictionary):
+    """Validate dictionary membership, structure, order, and uniqueness."""
+    problems = []
+    numbers = [level["number"] for level in levels]
+    if not numbers or numbers != list(range(1, len(numbers) + 1)):
+        problems.append("level numbers must be contiguous starting at 1")
+    seen_wheels = {}
+    seen_grids = {}
+    for level in levels:
+        number = level["number"]
+        for error in validate_level(level, dictionary):
+            problems.append(f"level {number}: {error}")
+        wheel = sig(level["letters"])
+        grid = tuple(sorted(w["word"] for w in level["words"]))
+        if wheel in seen_wheels:
+            problems.append(f"level {number}: duplicate letter set from level {seen_wheels[wheel]}")
+        else:
+            seen_wheels[wheel] = number
+        if grid in seen_grids:
+            problems.append(f"level {number}: duplicate grid words from level {seen_grids[grid]}")
+        else:
+            seen_grids[grid] = number
+    return problems
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--count", type=int, default=100, help="how many levels to generate")
-    ap.add_argument("--start", type=int, default=1, help="first level number")
+    ap.add_argument("--count", type=int, default=100, help="number of new levels to generate")
+    ap.add_argument("--start", type=int, help="first level (1 for a new set; next number when appending)")
     ap.add_argument("--seed", type=int, default=2024)
     ap.add_argument("--out", default="assets/levels/levels.json")
     ap.add_argument("--dart-out", default="lib/src/data/generated_levels.dart", help="generated Dart data used by the app")
-    ap.add_argument("--wordlist", help="plain word list, one word per line (used as-is)")
-    ap.add_argument("--dictionary", help="valid-words list (e.g. ENABLE); combine with --common")
+    ap.add_argument("--dictionary", default=str(DEFAULT_DICTIONARY), help="dictionary file (default: bundled ENABLE 3–7 letter subset)")
+    ap.add_argument("--wordlist", help="optional curated word list; intersected with the dictionary")
     ap.add_argument("--common", action="store_true", help="keep only common words (needs wordfreq)")
     ap.add_argument("--min-zipf", type=float, default=3.0, help="commonness cutoff for --common (higher = more common)")
     ap.add_argument("--max-wheel", type=int, default=6, help="largest wheel size (4-7)")
     ap.add_argument("--max-grid", type=int, default=MAX_GRID, help="largest board rows/cols")
     ap.add_argument("--validate", metavar="JSON", help="validate an existing levels file and exit")
+    ap.add_argument("--append", action="store_true", help="preserve and extend the existing --out file")
+    ap.add_argument("--replace", action="store_true", help="explicitly allow replacing existing output files")
     args = ap.parse_args()
 
-    if args.count < 1 or args.start < 1 or not 4 <= args.max_wheel <= 7 or args.max_grid < 4:
+    if args.count < 1 or (args.start is not None and args.start < 1) or not 4 <= args.max_wheel <= 7 or args.max_grid < 4:
         ap.error("count and start must be positive; max-wheel must be 4–7 and max-grid at least 4")
+    if args.append and args.replace:
+        ap.error("--append and --replace cannot be combined")
+    if args.validate and (args.append or args.replace):
+        ap.error("--validate cannot be combined with --append or --replace")
 
-    words, freq = load_words(args)
-    args._freq = freq
-    args._wordset = words
-    by_sig = build_index(words)
-
+    # Validation checks dictionary membership, not the optional frequency or
+    # curated generation filters, which may change over time.
+    dictionary = read_word_list(args.dictionary)
     if args.validate:
-        data = json.load(open(args.validate, encoding="utf8"))
-        bad = 0
-        nums = [lv["number"] for lv in data["levels"]]
-        if not nums or nums != list(range(nums[0], nums[0] + len(nums))):
-            print("ERROR: level numbers are empty or not contiguous")
-            bad += 1
-        for lv in data["levels"]:
-            errs = validate_level(lv, words)
-            if errs:
-                bad += 1
-                print(f'level {lv["number"]}: ' + "; ".join(errs))
-        print(f"{len(data['levels'])} levels checked, {bad} with problems")
-        sys.exit(1 if bad else 0)
+        with open(args.validate, encoding="utf8") as fh:
+            data = json.load(fh)
+        problems = validate_collection(data["levels"], dictionary)
+        for problem in problems:
+            print(problem)
+        print(f"{len(data['levels'])} levels checked, {len(problems)} problems")
+        sys.exit(1 if problems else 0)
 
-    # candidate wheels per size: one word per letter-set
+    output = Path(args.out)
+    dart_output = Path(args.dart_out)
+    if output.resolve() == dart_output.resolve():
+        ap.error("JSON and Dart outputs must be different files")
+    levels = []
+    if args.append:
+        if not output.is_file():
+            ap.error("--append requires an existing --out JSON file")
+        with output.open(encoding="utf8") as fh:
+            data = json.load(fh)
+        levels = data["levels"]
+        problems = validate_collection(levels, dictionary)
+        if problems:
+            for problem in problems:
+                print(problem, file=sys.stderr)
+            sys.exit("Existing levels failed validation; no output was changed")
+        if dart_output.exists():
+            # Do not accidentally overwrite an unrelated Dart level set when a
+            # custom JSON path is supplied without a matching --dart-out.
+            dart_text = dart_output.read_text(encoding="utf8")
+            marker = "const String generatedLevelsJson = r\'\'\'"
+            try:
+                encoded = dart_text.split(marker, 1)[1].rsplit("\'\'\';", 1)[0]
+                dart_data = json.loads(encoded)
+            except (IndexError, json.JSONDecodeError):
+                sys.exit("Dart output is not recognized; no output was changed")
+            if dart_data != data:
+                sys.exit("JSON and Dart outputs do not match; no output was changed")
+        start = len(levels) + 1
+        if args.start is not None and args.start != start:
+            ap.error(f"--start must be {start} when appending")
+    else:
+        if args.start not in (None, 1):
+            ap.error("new sets must start at 1; use --append to extend an existing set")
+        if not args.replace and (output.exists() or dart_output.exists()):
+            ap.error("output exists; use --append to extend it or --replace to overwrite it")
+        start = 1
+
+    words, freq, dictionary = load_words(args)
+    args._freq = freq
+    args._wordset = dictionary
+    by_sig = build_index(words)
     roots_by_size = defaultdict(list)
     seen = set()
     for w in sorted(words):
@@ -375,32 +437,31 @@ def main():
     for size in sorted(roots_by_size):
         print(f"wheel size {size}: {len(roots_by_size[size])} usable roots")
 
-    levels = []
-    used = set()
-    for n in range(args.start, args.start + args.count):
+    used_wheels = {sig(level["letters"]) for level in levels}
+    used_grids = {tuple(sorted(w["word"] for w in level["words"])) for level in levels}
+    for n in range(start, start + args.count):
         rng = random.Random(args.seed * 100003 + n)
-        lv = make_level(n, args, by_sig, roots_by_size, used, rng)
+        lv = make_level(n, args, by_sig, roots_by_size, used_wheels, used_grids, rng)
         if lv is None:
-            print(f"could not build level {n}; stopping (more words or a bigger list needed)")
-            break
+            sys.exit(f"Could not build unique level {n}; existing output was not overwritten. Try a larger dictionary or different seed.")
         levels.append(lv)
 
+    problems = validate_collection(levels, dictionary)
+    if problems:
+        sys.exit("Generated data failed validation; existing output was not overwritten:\n" + "\n".join(problems))
     out = {"version": 1, "levels": levels}
-    if len(levels) < args.count:
-        sys.exit("generation incomplete; existing output was not overwritten")
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.dart_out).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.out, "w", encoding="utf8") as fh:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    dart_output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", encoding="utf8") as fh:
         json.dump(out, fh, ensure_ascii=False, indent=1)
-    # The app consumes the same generated data synchronously, so it is also
-    # usable in widget tests without an asset-loading race.
+    # The app consumes the same generated data synchronously, without an asset race.
     encoded = json.dumps(out, ensure_ascii=True, separators=(",", ":"))
-    Path(args.dart_out).write_text(
+    dart_output.write_text(
         "// Generated by tools/generate_levels.py; do not edit.\n"
-        "const String generatedLevelsJson = r'''" + encoded + "''';\n",
+        "const String generatedLevelsJson = r\'\'\'" + encoded + "\'\'\';\n",
         encoding="utf8",
     )
-    print(f"wrote {len(levels)} levels to {args.out} and {args.dart_out}")
+    print(f"wrote {len(levels)} levels to {output} and {dart_output}")
 
 
 if __name__ == "__main__":

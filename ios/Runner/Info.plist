@@ -6,6 +6,9 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- Google sample app ID for test ads. Replace before release. -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
 	<key>CFBundleDisplayName</key>
 	<string>Wordnest</string>
 	<key>CFBundleExecutable</key>
