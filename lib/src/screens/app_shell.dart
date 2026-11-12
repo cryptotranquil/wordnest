@@ -4,6 +4,7 @@ import 'package:wordnest/src/screens/home_screen.dart';
 import 'package:wordnest/src/screens/missions_screen.dart';
 import 'package:wordnest/src/screens/settings_screen.dart';
 import 'package:wordnest/src/state/player_state.dart';
+import 'package:wordnest/src/state/settings_state.dart';
 import 'package:wordnest/src/services/sound_service.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
 
@@ -16,13 +17,37 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  int _currentIndex = 0;
+  // Tabs are not Navigator routes, so keep their own back history.
+  final List<int> _tabHistory = [0];
+  int get _currentIndex => _tabHistory.last;
+
+  void _selectTab(int index) {
+    if (index == _currentIndex) return;
+    setState(() {
+      if (index == 0) {
+        _tabHistory
+          ..clear()
+          ..add(0);
+      } else {
+        // Keep the most recent visit to each tab without unbounded growth.
+        _tabHistory.remove(index);
+        _tabHistory.add(index);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope<void>(
+      canPop: _tabHistory.length == 1,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _tabHistory.length > 1) {
+          setState(() => _tabHistory.removeLast());
+        }
+      },
+      child: Scaffold(
       body: IndexedStack(index: _currentIndex, children: [
-        HomeScreen(player: widget.player, onMissions: () => setState(() => _currentIndex = 2)),
+        HomeScreen(player: widget.player, onMissions: () => _selectTab(2)),
         ChaptersScreen(player: widget.player),
         MissionsScreen(player: widget.player),
         const SettingsScreen(),
@@ -39,19 +64,23 @@ class _AppShellState extends State<AppShell> {
           _navItem(3, Icons.settings_outlined, 'Settings'),
         ]))),
       ),
+      ),
     );
   }
 
   Widget _navItem(int index, IconData icon, String label) {
     final active = _currentIndex == index;
     return Expanded(child: Semantics(
+      key: ValueKey('navigation-tab-$index'),
       selected: active,
       button: true,
       label: label,
       child: InkWell(
         onTap: () {
-          SoundService.instance.play(SoundId.uiTap);
-          setState(() => _currentIndex = index);
+          if (SettingsState.instance.soundOn) {
+            SoundService.instance.play(SoundId.uiTap);
+          }
+          _selectTab(index);
         },
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(icon, size: 24, color: active ? AppColors.teal : AppColors.muted),
