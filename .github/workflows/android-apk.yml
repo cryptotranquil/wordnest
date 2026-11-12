@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          flutter build apk --release --no-pub 2>&1 | tee "$RUNNER_TEMP/apk-build.log"
+          flutter build apk --release --no-pub --no-shrink 2>&1 | tee "$RUNNER_TEMP/apk-build.log"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             # SDK installers use carriage returns for progress. Keep only the
@@ -48,14 +48,6 @@ jobs:
             echo "::error::$summary"
             exit "$status"
           fi
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: wordnest-android-test-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-          retention-days: 14
 
       # An APK can compile successfully yet still crash before Flutter starts.
       - name: Enable KVM for Android emulator
@@ -73,3 +65,11 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: bash tools/android_smoke_test.sh
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wordnest-android-test-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
