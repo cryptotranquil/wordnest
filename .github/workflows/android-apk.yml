@@ -40,14 +40,12 @@ jobs:
           flutter build apk --release --no-pub 2>&1 | tee "$RUNNER_TEMP/apk-build.log"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            echo "::group::Last build log lines"
-            tail -n 60 "$RUNNER_TEMP/apk-build.log" | while IFS= read -r line; do
-              # GitHub annotations remain available when full job logs cannot be fetched.
-              line=${line//'%'/'%25'}
-              line=${line//$'\r'/'%0D'}
-              echo "::error::$line"
-            done
-            echo "::endgroup::"
+            # SDK installers use carriage returns for progress. Keep only the
+            # end of the log and emit one multiline annotation.
+            summary=$(tr '\r' '\n' < "$RUNNER_TEMP/apk-build.log" | tail -n 50)
+            summary=${summary//'%'/'%25'}
+            summary=${summary//$'\n'/'%0A'}
+            echo "::error::$summary"
             exit "$status"
           fi
 
