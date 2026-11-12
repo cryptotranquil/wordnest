@@ -63,6 +63,10 @@ jobs:
             exit "$status"
           fi
 
+      # Free build JVM memory before starting the emulator on the same runner.
+      - name: Stop Gradle daemons
+        run: cd android && ./gradlew --stop
+
       # An APK can compile successfully yet still crash before Flutter starts.
       - name: Enable KVM for Android emulator
         run: |
