@@ -33,7 +33,13 @@ jobs:
       - name: Resolve dependencies
         run: |
           flutter pub get
-          echo "::notice title=Resolved lockfile::$(gzip -c pubspec.lock | base64 -w0)"
+          lock=$(gzip -c pubspec.lock | base64 -w0)
+          index=0
+          while [ -n "$lock" ]; do
+            echo "::notice title=Resolved lockfile part $index::${lock:0:3000}"
+            lock=${lock:3000}
+            index=$((index + 1))
+          done
 
       - name: Build release-mode test APK
         shell: bash
