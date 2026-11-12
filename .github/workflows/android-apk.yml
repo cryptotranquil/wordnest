@@ -14,10 +14,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -34,7 +34,22 @@ jobs:
         run: flutter pub get --enforce-lockfile
 
       - name: Build release-mode test APK
-        run: flutter build apk --release --no-pub
+        shell: bash
+        run: |
+          set +e
+          flutter build apk --release --no-pub 2>&1 | tee "$RUNNER_TEMP/apk-build.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::group::Last build log lines"
+            tail -n 60 "$RUNNER_TEMP/apk-build.log" | while IFS= read -r line; do
+              # GitHub annotations remain available when full job logs cannot be fetched.
+              line=${line//'%'/'%25'}
+              line=${line//$'\r'/'%0D'}
+              echo "::error::$line"
+            done
+            echo "::endgroup::"
+            exit "$status"
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
