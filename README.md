@@ -7,9 +7,8 @@ manually from GitHub: open **Actions → Build Android APK → Run workflow**, s
 the branch, and run it. When the run succeeds, open the run and download
 **wordnest-android-test-apk** under Artifacts. Extract the ZIP and install
 `app-release.apk` on an Android device. The workflow also launches the APK on an
-Android 13 emulator and only uploads it if the startup check succeeds. The test
-build disables Android code shrinking to prevent a WorkManager/Room startup
-crash observed with the current dependencies; this makes the APK larger.
+Android 13 emulator and only uploads it if the startup check succeeds. A
+ProGuard rule preserves WorkManager's database classes used during startup.
 
 This is a release-mode **testing build**, not a store-ready release: the current
 Android configuration signs it with a generated debug key. The key can differ

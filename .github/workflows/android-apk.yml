@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          flutter build apk --release --no-pub --no-shrink 2>&1 | tee "$RUNNER_TEMP/apk-build.log"
+          flutter build apk --release --no-pub 2>&1 | tee "$RUNNER_TEMP/apk-build.log"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             # SDK installers use carriage returns for progress. Keep only the
