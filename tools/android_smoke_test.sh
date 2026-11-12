@@ -25,3 +25,23 @@ if ! adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResume
   exit 1
 fi
 echo 'WordNest is running in the foreground on Android 13.'
+
+# Dismiss the first-launch daily reward screen, if present, then select the
+# rightmost bottom tab (Settings). This tests Android's actual back dispatch.
+adb shell input keyevent KEYCODE_BACK
+sleep 3
+size=$(adb shell wm size | tail -n 1 | grep -oE '[0-9]+x[0-9]+')
+density=$(adb shell wm density | tail -n 1 | grep -oE '[0-9]+')
+width=${size%x*}
+height=${size#*x}
+x=$((width * 7 / 8))
+y=$((height - density * 58 / 160))
+adb shell input tap "$x" "$y"
+sleep 2
+adb shell input keyevent KEYCODE_BACK
+sleep 3
+if ! adb shell pidof "$package" > /dev/null || ! adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | grep -q "$package"; then
+  echo '::error title=Android back navigation::Back from Settings exited the app instead of returning to Home.'
+  exit 1
+fi
+echo 'Back from Settings returned to the app on Android 13.'
