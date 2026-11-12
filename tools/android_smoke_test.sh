@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 # Runs inside an already-booted Android emulator.
-set -euo pipefail
+set -Eeuo pipefail
+on_error() {
+  local status=$? line=$1
+  trap - ERR
+  local details
+  details=$(printf 'Smoke test failed at line %s (exit %s).\n' "$line" "$status";     adb shell wm size 2>&1; adb shell wm density 2>&1;     adb shell dumpsys activity activities 2>&1 | grep -E 'mResumedActivity|topResumedActivity' || true)
+  details=${details//'%'/'%25'}
+  details=${details//$'\r'/'%0D'}
+  details=${details//$'\n'/'%0A'}
+  echo "::error title=Android smoke test details::$details"
+  exit "$status"
+}
+trap 'on_error "$LINENO"' ERR
 package=com.example.wordnest
 apk=build/app/outputs/flutter-apk/app-release.apk
 adb logcat -c
