@@ -1,30 +1,59 @@
 # WordNest level generator
 
-`generate_levels.py` produces both `assets/levels/levels.json` for inspection
-and `lib/src/data/generated_levels.dart` for the app. Commit both files together;
-the app reads the generated Dart copy synchronously, not the JSON asset.
+The generator checks every crossword and bonus word against the bundled
+[ENABLE word-game dictionary](dictionaries/README.md), including when a custom
+curated `--wordlist` is supplied. A curated list can narrow the dictionary but
+cannot add words outside it. The dictionary covers ASCII words of 3–7 letters,
+matching the generator's supported wheel sizes. `--dictionary path/to/list.txt`
+can replace it with a different trusted word list (one word per line).
 
-The checked-in 60-level prototype was made with Python 3 and [`wordfreq` 3.1.1](https://github.com/rspeer/wordfreq) (Apache-2.0):
+It writes both `assets/levels/levels.json` and
+`lib/src/data/generated_levels.dart`. The app reads the generated Dart copy;
+commit both files together. Generation works offline without extra packages;
+`--common` additionally requires the `wordfreq` package.
+
+## Check the shipped levels
 
 ```sh
-python -m pip install wordfreq==3.1.1
-python tools/generate_levels.py --count 60 --common --min-zipf 3.3
-python tools/generate_levels.py --validate assets/levels/levels.json --common --min-zipf 3.3
+python tools/generate_levels.py --validate assets/levels/levels.json
 python -m unittest discover -s tools -p 'test_*.py'
 flutter test
 ```
 
-For a curated dictionary, use `--wordlist path/to/words.txt` (one English word
-per line) or `--dictionary path/to/words.txt --common`. The same input, version,
-seed and options produce the same output. The default seed is 2024. Keep the
-same input and options when extending a shipped set; changing them will change
-existing puzzles and can affect saved progress. Generation does not overwrite
-existing output if it cannot build the requested number of levels.
+Validation checks dictionary membership for both grid and bonus words,
+crossings, playable letters, grid runs, contiguous level numbers and duplicate
+letter sets and grid-word sets. It does **not** check that words are familiar,
+appropriate or fun. ENABLE contains obscure words, inflections and entries that
+may look like names or abbreviations. The small blocklist and optional frequency
+filter are not a substitute for human review and play-testing.
 
-**Before release:** structural validation checks crossings, playable letters,
-grid runs and duplicates. It does not guarantee appropriate vocabulary or fun
-difficulty. The current automatically generated set can contain names,
-abbreviations and obscure words; curate the source list, expand the blocklist,
-and play-test every level. The app ships only the generated bonus words, not a
-full dictionary. Generated chapter names repeat after 60, but the current app
-only defines three chapter themes and paths.
+## Extend without changing existing puzzles
+
+```sh
+python -m pip install wordfreq==3.1.1
+python tools/generate_levels.py --append --count 20 --common --min-zipf 4.5
+```
+
+`--append` validates the existing JSON, checks it matches the generated Dart
+file, preserves all existing levels and starts at the next number. Previously
+used letter sets and grid-word sets are excluded. If there are not enough valid,
+unique puzzles, generation fails **without replacing the existing files**.
+Do not run independent batches and merge them manually: only an append operation
+can check uniqueness against the previous batch. The app currently defines only
+three chapters (levels 1–60); extending the data alone does not add chapter UI.
+
+## Replace the whole set deliberately
+
+The current 60-level set was generated with Python 3, the bundled ENABLE subset,
+[`wordfreq` 3.1.1](https://github.com/rspeer/wordfreq), and:
+
+```sh
+python tools/generate_levels.py --count 60 --common --min-zipf 4.5 --replace
+```
+
+`--replace` is required to overwrite existing outputs. It can change existing
+puzzles even though saved level numbers remain the same. Keep the input files,
+package version, seed and options identical for reproducible results. The
+original WordNest prototype was replaced with the dictionary-checked set because
+34 of its grids contained at least one word outside ENABLE; saved unlock progress
+is not reset, but players replaying a level will see a new puzzle.

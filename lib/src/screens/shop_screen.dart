@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:wordnest/src/services/ad_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:wordnest/src/services/purchase_service.dart';
 import 'package:wordnest/src/state/player_state.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
 import 'package:wordnest/src/widgets/scenic_background.dart';
+import 'package:wordnest/src/widgets/rewarded_offers.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({super.key, required this.player});
@@ -15,43 +16,24 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  late PurchaseService _purchaseService;
-  late AdService _adService;
-  int _hintCharges = 3;
-  DateTime? _lastHintRefill;
+  PurchaseService? _purchaseService;
 
   @override
   void initState() {
     super.initState();
-    _purchaseService = PurchaseService();
-    _adService = AdService();
-    _purchaseService.initialize(widget.player);
-    _calculateHintCharges();
-  }
-
-  void _calculateHintCharges() {
-    final now = DateTime.now();
-    if (_lastHintRefill == null) {
-      _lastHintRefill = now;
-      _hintCharges = 3;
-    } else {
-      final difference = now.difference(_lastHintRefill!);
-      final hoursPassed = difference.inHours;
-      _hintCharges = (_hintCharges + (hoursPassed ~/ 2)).clamp(0, 3);
-      if (hoursPassed >= 2) {
-        _lastHintRefill = now;
-      }
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+      _purchaseService = PurchaseService();
+      _initializePurchases();
     }
   }
 
-  Future<void> _showRewardedAd() async {
-    await _adService.showRewardedAd(onReward: () {
-      setState(() {
-        widget.player.addHints(3);
-        _hintCharges = 0;
-        _lastHintRefill = DateTime.now();
-      });
-    });
+  Future<void> _initializePurchases() async {
+    try {
+      await _purchaseService!.initialize(widget.player);
+      if (mounted) setState(() {});
+    } catch (error) {
+      debugPrint('Purchases are unavailable: $error');
+    }
   }
 
   @override
@@ -70,8 +52,9 @@ class _ShopScreenState extends State<ShopScreen> {
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
+                      RewardedOffers(player: widget.player),
+                      const SizedBox(height: 16),
                       _buildCoinPacksSection(),
-                      _buildHintBoostSection(),
                       _buildRemoveAdsSection(),
                       _buildRestorePurchasesSection(),
                     ],
@@ -91,14 +74,19 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.cream),
+            tooltip: 'Back',
+          ),
+          const Expanded(child: Text(
             'WordNest Shop',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
               color: AppColors.cream,
             ),
-          ),
+          )),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -113,15 +101,24 @@ class _ShopScreenState extends State<ShopScreen> {
                   color: AppColors.gold,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  '${widget.player.coins}',
-                  style: AppText.label(12, weight: FontWeight.w700, color: AppColors.gold),
+                ListenableBuilder(
+                  listenable: widget.player,
+                  builder: (context, _) => Text(
+                    '${widget.player.coins}',
+                    style: AppText.label(12, weight: FontWeight.w700, color: AppColors.gold),
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  void _showPurchaseUnavailable() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Purchases are not available on this device.')),
     );
   }
 
@@ -174,9 +171,12 @@ class _ShopScreenState extends State<ShopScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () async {
-          if (_purchaseService.isAvailable()) {
-            await _purchaseService.buyProduct(productId);
-            setState(() {});
+          final purchases = _purchaseService;
+          if (purchases?.isAvailable() ?? false) {
+            await purchases!.buyProduct(productId);
+            if (mounted) setState(() {});
+          } else {
+            _showPurchaseUnavailable();
           }
         },
         borderRadius: BorderRadius.circular(12),
@@ -219,100 +219,6 @@ class _ShopScreenState extends State<ShopScreen> {
     );
   }
 
-  Widget _buildHintBoostSection() {
-    _calculateHintCharges();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            'Zen Focus Clip',
-            style: AppText.label(14, weight: FontWeight.w700, color: AppColors.teal),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.glassLine.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.teal.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.psychology_rounded,
-                        size: 24,
-                        color: AppColors.teal,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Double with Zen Spark',
-                            style: AppText.quicksand(18, color: AppColors.cream),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Watch an ad to get +3 hints (max 3 charges)',
-                            style: AppText.label(12, color: AppColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: List.generate(3, (index) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: Icon(
-                            index < _hintCharges ? Icons.circle : Icons.circle_outlined,
-                            size: 16,
-                            color: index < _hintCharges ? AppColors.teal : AppColors.muted,
-                          ),
-                        );
-                      }),
-                    ),
-                    ElevatedButton(
-                      onPressed: _hintCharges < 3 ? _showRewardedAd : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.teal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Watch Ad',
-                        style: AppText.label(12, weight: FontWeight.w700, color: AppColors.ink),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRemoveAdsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,9 +239,12 @@ class _ShopScreenState extends State<ShopScreen> {
             color: Colors.transparent,
             child: InkWell(
               onTap: () async {
-                if (_purchaseService.isAvailable()) {
-                  await _purchaseService.buyProduct(PurchaseService.removeAds);
-                  setState(() {});
+                final purchases = _purchaseService;
+                if (purchases?.isAvailable() ?? false) {
+                  await purchases!.buyProduct(PurchaseService.removeAds);
+                  if (mounted) setState(() {});
+                } else {
+                  _showPurchaseUnavailable();
                 }
               },
               borderRadius: BorderRadius.circular(12),
@@ -361,12 +270,12 @@ class _ShopScreenState extends State<ShopScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Remove All Ads',
+                            'Remove Interruptive Ads',
                             style: AppText.quicksand(16, color: AppColors.cream),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Includes 500 bonus coins',
+                            'Optional reward ads remain available',
                             style: AppText.label(12, color: AppColors.muted),
                           ),
                         ],
@@ -392,9 +301,12 @@ class _ShopScreenState extends State<ShopScreen> {
       child: Center(
         child: TextButton(
           onPressed: () async {
-            if (_purchaseService.isAvailable()) {
-              await _purchaseService.restorePurchases();
-              setState(() {});
+            final purchases = _purchaseService;
+            if (purchases?.isAvailable() ?? false) {
+              await purchases!.restorePurchases();
+              if (mounted) setState(() {});
+            } else {
+              _showPurchaseUnavailable();
             }
           },
           child: Text(

@@ -2,9 +2,12 @@
 
 ## Implemented in this pass
 
-- The existing Python generator now outputs a 60-level prototype and the matching
-  Dart data consumed by the app. Levels advance sequentially; missing levels no
-  longer silently open level 14. Generated words still need human review.
+- The Python generator outputs 60 dictionary-checked prototype levels and the
+  matching Dart data consumed by the app. Levels advance sequentially; missing
+  levels no longer silently open level 14. The previous prototype was replaced:
+  saved unlock levels stay intact, but the puzzles themselves have changed.
+  Appending now preserves levels and rejects duplicate wheels and grid word sets.
+  Dictionary membership does not replace human review of word suitability.
 - Home shows the current chapter and real progress, opens the shop and Missions,
   and no longer advertises a nonexistent daily puzzle.
 - Gameplay updates persistent daily and lifetime statistics. Four daily missions
