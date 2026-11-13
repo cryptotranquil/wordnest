@@ -3,6 +3,9 @@ import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:wordnest/src/config/app_links.dart';
 import 'package:wordnest/src/state/settings_state.dart';
 import 'package:wordnest/src/services/sound_service.dart';
+import 'package:wordnest/src/services/ad_consent_service.dart';
+import 'package:wordnest/src/services/ad_service.dart';
+import 'package:wordnest/src/widgets/ad_age_gate.dart';
 import 'package:wordnest/src/theme/wordnest_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -22,13 +25,46 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _openAdPrivacyOptions(BuildContext context) async {
+    final ads = AdService();
+    final ageAllowed = await confirmAdAge(context, ads);
+    if (!context.mounted) return;
+    if (!ageAllowed) {
+      if (ads.adsBlockedForAge) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ads are unavailable for players under 18.'),
+        ));
+      }
+      return;
+    }
+    final consent = AdConsentService.instance;
+    if (!consent.updatedThisSession) {
+      await consent.prepare(canShow: () => context.mounted);
+      if (!context.mounted) return;
+    }
+    if (!context.mounted) return;
+    if (!consent.privacyOptionsRequired) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Ad privacy options are not available right now.'),
+      ));
+      return;
+    }
+    final opened = await consent.showPrivacyOptions();
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ad privacy options are unavailable. Please try again.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = SettingsState.instance;
+    final adConsent = AdConsentService.instance;
     return Scaffold(
       backgroundColor: AppColors.ink,
       body: SafeArea(child: ListenableBuilder(
-        listenable: settings,
+        listenable: Listenable.merge([settings, adConsent]),
         builder: (context, _) => ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           children: [
@@ -61,6 +97,10 @@ class SettingsScreen extends StatelessWidget {
               _LinkRow(icon: Icons.language_rounded, title: 'Word Lexicon', subtitle: 'English (US)', onTap: () => _showInfo(context, 'Word Lexicon', 'English words are currently defined for each puzzle.')),
               _LinkRow(icon: Icons.favorite_border_rounded, title: 'Wellness Reminders', subtitle: 'Coming soon', onTap: () => _showInfo(context, 'Wellness Reminders', 'Reminders are not available yet.')),
               _LinkRow(icon: Icons.shield_outlined, title: 'Privacy & Terms', onTap: () => _openPrivacy(context)),
+              if (AdService().isSupported)
+                _LinkRow(icon: Icons.privacy_tip_outlined, title: 'Ad privacy options',
+                  subtitle: 'Review your advertising choices',
+                  onTap: () => _openAdPrivacyOptions(context)),
             ]),
             const SizedBox(height: 24),
             Center(child: Text('WordNest v0.1.0', style: AppText.label(11, color: AppColors.muted))),

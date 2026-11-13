@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/ad_service.dart';
 import '../state/player_state.dart';
 import '../theme/wordnest_theme.dart';
+import 'ad_age_gate.dart';
 
 /// Optional ads for two distinct rewards. Used in both the shop and the
 /// insufficient-resources sheet, so neither requires spending coins first.
@@ -29,6 +30,17 @@ class _RewardedOffersState extends State<RewardedOffers> {
       _busy = true;
       _message = null;
     });
+    final ageAllowed = await confirmAdAge(context, _ads);
+    if (!mounted) return;
+    if (!ageAllowed) {
+      setState(() {
+        _busy = false;
+        _message = _ads.adsBlockedForAge
+            ? 'Ads are unavailable for players under 18. You can still play without ads.'
+            : null;
+      });
+      return;
+    }
     final player = widget.player;
     var earned = false;
     RewardedAdResult result;
@@ -53,6 +65,7 @@ class _RewardedOffersState extends State<RewardedOffers> {
             RewardedAdResult.dismissed => 'Ad closed before the reward was earned.',
             RewardedAdResult.unsupported => 'Rewarded ads are available on Android and iOS only.',
             RewardedAdResult.busy => 'An ad is already in progress.',
+            RewardedAdResult.privacySetupRequired => 'Ads are unavailable until the required privacy choices are complete. Please try again.',
             _ => 'No rewarded ad is available right now. Please try again later.',
           };
     setState(() {
