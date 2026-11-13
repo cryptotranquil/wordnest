@@ -15,6 +15,6 @@ Android configuration signs it with a generated debug key. The key can differ
 between workflow runs, so uninstalling a previous build may be necessary (and
 will remove its local game data). The package ID is still `com.example.wordnest`.
 Before distributing or publishing, configure a unique application ID and a
-secure, persistent release signing key. The app uses Google test ad units by
-default; see [rewarded ads setup](docs/rewarded_ads.md) for the explicit production
-build flag and mandatory privacy, audience, consent and AdMob setup. No signing secrets are needed for this test workflow.
+secure, persistent release signing key. The app also uses Google test ad IDs;
+see [rewarded ads setup](docs/rewarded_ads.md) for production IDs and privacy
+requirements. No signing secrets are needed for this test workflow.

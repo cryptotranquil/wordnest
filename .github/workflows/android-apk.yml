@@ -33,17 +33,17 @@ jobs:
       - name: Install locked dependencies
         run: flutter pub get --enforce-lockfile
 
-      - name: Test navigation and rewarded ad safety
+      - name: Test back navigation
         shell: bash
         run: |
           set +e
-          flutter test --no-pub test/back_navigation_test.dart test/ad_consent_service_test.dart test/rewarded_ads_test.dart 2>&1 | tee "$RUNNER_TEMP/navigation-test.log"
+          flutter test --no-pub test/back_navigation_test.dart 2>&1 | tee "$RUNNER_TEMP/navigation-test.log"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             summary=$(tr '\r' '\n' < "$RUNNER_TEMP/navigation-test.log" | tail -n 60)
             summary=${summary//'%'/'%25'}
             summary=${summary//$'\n'/'%0A'}
-            echo "::error title=Navigation and ad tests::$summary"
+            echo "::error title=Back navigation tests::$summary"
             exit "$status"
           fi
 

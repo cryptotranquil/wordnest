@@ -3,30 +3,20 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:wordnest/src/config/ad_config.dart';
-import 'package:wordnest/src/services/ad_consent_service.dart';
 
 /// Result of one opted-in rewarded ad. Rewards are delivered separately, only
 /// from the SDK's onUserEarnedReward callback.
-enum RewardedAdResult {
-  rewarded, dismissed, unavailable, unsupported, busy, failed, privacySetupRequired
-}
-
-class _ConsentNotReady implements Exception {
-  const _ConsentNotReady();
-}
+enum RewardedAdResult { rewarded, dismissed, unavailable, unsupported, busy, failed }
 
 abstract class RewardedAdGateway {
   bool get isSupported;
-  bool get needsAdultConfirmation;
-  bool get adsBlockedForAge;
-  void recordAdultConfirmation(bool isAdult);
   Future<RewardedAdResult> showRewardedAd({required VoidCallback onReward, bool Function()? canShow});
 }
 
 /// Small interfaces keep the ad lifecycle testable without the native SDK.
 abstract class RewardedAdBackend {
   bool get isSupported;
-  Future<RewardedAdHandle?> load({bool Function()? canShow});
+  Future<RewardedAdHandle?> load();
 }
 
 abstract class RewardedAdHandle {
@@ -44,8 +34,6 @@ class AdService implements RewardedAdGateway {
 
   final RewardedAdBackend _rewardedBackend;
   bool _rewardedBusy = false;
-  // Session-only age response: do not collect or persist birth dates.
-  bool? _isAdult;
   InterstitialAd? _interstitialAd;
   int _levelsCleared = 0;
   DateTime? _lastInterstitialTime;
@@ -55,27 +43,13 @@ class AdService implements RewardedAdGateway {
   bool get isSupported => _rewardedBackend.isSupported;
 
   @override
-  bool get needsAdultConfirmation => AdConfig.useProductionAndroidAds && _isAdult == null;
-
-  @override
-  bool get adsBlockedForAge => AdConfig.useProductionAndroidAds && _isAdult == false;
-
-  @override
-  void recordAdultConfirmation(bool isAdult) => _isAdult = isAdult;
-
-  @override
   Future<RewardedAdResult> showRewardedAd({required VoidCallback onReward, bool Function()? canShow}) async {
     if (!isSupported) return RewardedAdResult.unsupported;
-    // Avoid requesting production ads for users who may be below the age of
-    // consent; the game itself remains playable for teenagers without ads.
-    if (AdConfig.useProductionAndroidAds && _isAdult != true) {
-      return RewardedAdResult.privacySetupRequired;
-    }
     if (_rewardedBusy) return RewardedAdResult.busy;
     _rewardedBusy = true;
     var credited = false;
     try {
-      final ad = await _rewardedBackend.load(canShow: canShow);
+      final ad = await _rewardedBackend.load();
       if (ad == null) return RewardedAdResult.unavailable;
       if (canShow != null && !canShow()) {
         await ad.dispose();
@@ -86,8 +60,6 @@ class AdService implements RewardedAdGateway {
         credited = true;
         onReward();
       });
-    } on _ConsentNotReady {
-      return RewardedAdResult.privacySetupRequired;
     } catch (error) {
       debugPrint('Rewarded ad failed: $error');
       return RewardedAdResult.failed;
@@ -97,8 +69,6 @@ class AdService implements RewardedAdGateway {
   }
 
   Future<void> preloadInterstitialAd() async {
-    if (!isSupported || (AdConfig.useProductionAndroidAds && _isAdult != true)) return;
-    if (!await AdConsentService.instance.prepare()) return;
     try {
       await InterstitialAd.load(
         adUnitId: AdConfig.interstitialAdUnitId,
@@ -173,15 +143,11 @@ class _MobileRewardedAdBackend implements RewardedAdBackend {
   }
 
   @override
-  Future<RewardedAdHandle?> load({bool Function()? canShow}) async {
-    final id = defaultTargetPlatform == TargetPlatform.iOS
-        ? AdConfig.iosRewardedAdUnitId : AdConfig.androidRewardedAdUnitId;
-    if (!await AdConsentService.instance.prepare(canShow: canShow)) {
-      throw const _ConsentNotReady();
-    }
-    if (canShow != null && !canShow()) return null;
+  Future<RewardedAdHandle?> load() async {
     await _initialize();
     final loaded = Completer<RewardedAd?>();
+    final id = defaultTargetPlatform == TargetPlatform.iOS
+        ? AdConfig.iosRewardedAdUnitId : AdConfig.androidRewardedAdUnitId;
 
     Future<void> requestAd() async {
       try {

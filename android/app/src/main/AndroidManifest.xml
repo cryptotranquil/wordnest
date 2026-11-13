@@ -4,10 +4,10 @@
         android:label="wordnest"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- WordNest's Android AdMob app ID; test units are used by default. -->
+        <!-- Google sample app ID for test ads. Replace before release. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-1956286249831581~6829909796" />
+            android:value="ca-app-pub-3940256099942544~3347511713" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
