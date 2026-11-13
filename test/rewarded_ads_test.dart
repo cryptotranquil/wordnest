@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wordnest/src/services/ad_service.dart';
+import 'package:wordnest/src/config/ad_config.dart';
 import 'package:wordnest/src/state/player_state.dart';
 import 'package:wordnest/src/widgets/rewarded_offers.dart';
 
@@ -28,7 +29,7 @@ class FakeBackend implements RewardedAdBackend {
   @override
   bool get isSupported => supported;
   @override
-  Future<RewardedAdHandle?> load() async { loads++; return handle; }
+  Future<RewardedAdHandle?> load({bool Function()? canShow}) async { loads++; return handle; }
 }
 
 
@@ -37,16 +38,24 @@ class DelayedBackend implements RewardedAdBackend {
   @override
   bool get isSupported => true;
   @override
-  Future<RewardedAdHandle?> load() => pending.future;
+  Future<RewardedAdHandle?> load({bool Function()? canShow}) => pending.future;
 }
 
 class FakeGateway implements RewardedAdGateway {
-  FakeGateway({this.supported = true});
+  FakeGateway({this.supported = true, this.requireAge = false});
   final bool supported;
+  final bool requireAge;
+  bool? adult;
   Completer<RewardedAdResult>? pending;
   VoidCallback? reward;
   @override
   bool get isSupported => supported;
+  @override
+  bool get needsAdultConfirmation => requireAge && adult == null;
+  @override
+  bool get adsBlockedForAge => requireAge && adult == false;
+  @override
+  void recordAdultConfirmation(bool isAdult) { adult = isAdult; }
   @override
   Future<RewardedAdResult> showRewardedAd({required VoidCallback onReward, bool Function()? canShow}) {
     reward = onReward;
@@ -58,6 +67,12 @@ class FakeGateway implements RewardedAdGateway {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test('production units require both release mode and explicit opt-in', () {
+    expect(AdConfig.androidUnitFor(release: false, productionRequested: true), AdConfig.androidTestRewardedAdUnitId);
+    expect(AdConfig.androidUnitFor(release: true, productionRequested: false), AdConfig.androidTestRewardedAdUnitId);
+    expect(AdConfig.androidUnitFor(release: true, productionRequested: true), AdConfig.androidProductionRewardedAdUnitId);
+  });
 
   test('service rejects overlapping ads and awards only once per ad', () async {
     final handle = FakeHandle();
@@ -163,6 +178,34 @@ void main() {
     await tester.pump();
     expect(player.coins, 100);
     await player.save();
+  });
+
+  testWidgets('under-18 players cannot start production ads', (tester) async {
+    final player = PlayerState();
+    final ads = FakeGateway(requireAge: true);
+    await tester.pumpWidget(buildOffers(player, ads));
+    await tester.tap(find.byType(FilledButton).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Under 18'));
+    await tester.pumpAndSettle();
+    expect(ads.pending, isNull);
+    expect(player.hints, 0);
+    expect(find.textContaining('Ads are unavailable for players under 18'), findsOneWidget);
+  });
+
+  testWidgets('adult confirmation proceeds to the ad, not an automatic reward', (tester) async {
+    final player = PlayerState();
+    final ads = FakeGateway(requireAge: true);
+    await tester.pumpWidget(buildOffers(player, ads));
+    await tester.tap(find.byType(FilledButton).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('18 or older'));
+    await tester.pump();
+    expect(ads.pending, isNotNull);
+    expect(player.coins, 0);
+    ads.pending!.complete(RewardedAdResult.dismissed);
+    await tester.pump();
+    expect(player.coins, 0);
   });
 
   testWidgets('unsupported devices show a clear message and disabled buttons', (tester) async {
